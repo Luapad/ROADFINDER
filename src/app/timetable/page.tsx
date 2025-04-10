@@ -158,7 +158,7 @@ export default function TimetablePage() {
         onClick={handleAdd}
         className="w-full bg-blue-600 text-white py-2 rounded-md mb-4 font-semibold"
       >
-        시간표에 추가
+        강의 추가
       </button>
 
       <div className="w-full">
