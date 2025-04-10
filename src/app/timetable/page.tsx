@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 const weekdays = ['월', '화', '수', '목', '금'] as const;
@@ -45,6 +46,7 @@ const timeToMinutes = (time: string) => {
 };
 
 export default function TimetablePage() {
+  const router = useRouter();
   const [subject, setSubject] = useState('');
   const [building, setBuilding] = useState('');
   const [selectedDays, setSelectedDays] = useState<Weekday[]>([]);
@@ -100,7 +102,16 @@ export default function TimetablePage() {
 
   return (
     <main className="p-4 w-full max-w-md mx-auto">
-      <h2 className="text-xl font-bold mb-4 text-gray-900">시간표 입력</h2>
+      <div className="flex justify-between items-center mb-4">
+  <h2 className="text-xl font-bold text-gray-900">시간표 입력</h2>
+  <button
+    onClick={() => router.push('/timetable-map')}
+    className="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-md font-medium"
+  >
+    지도 보기
+  </button>
+</div>
+
 
       <input
         type="text"

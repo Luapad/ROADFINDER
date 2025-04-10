@@ -10,6 +10,7 @@ export default function Home() {
 
     const handleLogin = () => {
         // 실제 인증 로직은 나중에 추가
+        localStorage.setItem('isLoggedIn', 'true');
         if (id && password) router.push('/timetable');
     };
 
