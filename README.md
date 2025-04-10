@@ -1,36 +1,19 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LoadFinder
 
-## Getting Started
+layout.tsx # app 디렉토리 기반 라우팅에서 공통 레이아웃웃
 
-First, run the development server:
+src/app/page.tsx   # 로그인 화면 & 로그인 전 홈 화면, 지도보기는 비회원 전용, 로그인 하면 시간표 페이지로 이동
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+components/LogoutButton.tsx  # 로그아웃 버튼 기능
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+app/timetable/page.tsx # 시간표 페이지
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+app/map  # 비회원 지도 
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+app/timetable-map # 시간표 연동 지도
 
-## Learn More
+지도 관련 기능은 추후 커스텀한 지도로 바꾸고 추가할 예정
 
-To learn more about Next.js, take a look at the following resources:
+로그인 후 홈 화면 따로 추가할 예정
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+UI스타일도 추후 변경 예정, 지금은 기능 구현만 
