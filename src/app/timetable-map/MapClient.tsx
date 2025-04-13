@@ -65,7 +65,6 @@ export default function MapClient() {
         {currentPos && <Marker position={currentPos} />}
       </MapContainer>
 
-      {/* 상단 우측 버튼 */}
       <div className="absolute top-4 right-4 flex flex-row gap-2 z-[1000]">
         <button
           onClick={() => router.push('/')}

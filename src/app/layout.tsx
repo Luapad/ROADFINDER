@@ -1,8 +1,7 @@
-// app/layout.tsx
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import LogoutButton from '../../components/LogoutButton'; // 로그아웃 버튼 import
+import LogoutButton from '../../components/LogoutButton';
 
 const inter = Inter({ subsets: ['latin'] });
 

@@ -11,7 +11,7 @@ export default function Home() {
   const handleLogin = () => {
     if (id && password) {
       localStorage.setItem('isLoggedIn', 'true');
-      window.dispatchEvent(new Event('login')); // ✅ 상태 동기화 알림
+      window.dispatchEvent(new Event('login')); 
       router.push('/timetable');
     }
   };
