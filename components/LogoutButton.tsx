@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 
 export default function LogoutButton() {
   const router = useRouter();
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null); // ✅ null로 초기화
-  const [mounted, setMounted] = useState(false); // ✅ 렌더링 준비 상태
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null); 
+  const [mounted, setMounted] = useState(false); 
 
   useEffect(() => {
     const checkLogin = () => {
@@ -32,7 +32,6 @@ export default function LogoutButton() {
     router.push('/');
   };
 
-  // ✅ 로그인 상태가 확인되기 전까지는 렌더링하지 않음
   if (!mounted || loggedIn !== true) return null;
 
   return (

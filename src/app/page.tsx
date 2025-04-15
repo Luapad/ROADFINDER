@@ -12,7 +12,7 @@ export default function Home() {
     if (id && password) {
       localStorage.setItem('isLoggedIn', 'true');
       window.dispatchEvent(new Event('login')); 
-      router.push('/timetable');
+      router.push('/dashboard');
     }
   };
 

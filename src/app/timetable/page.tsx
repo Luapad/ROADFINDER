@@ -102,15 +102,24 @@ export default function TimetablePage() {
 
   return (
     <main className="p-4 w-full max-w-md mx-auto">
-      <div className="flex justify-between items-center mb-4">
-  <h2 className="text-xl font-bold text-gray-900">시간표 입력</h2>
-  <button
-    onClick={() => router.push('/timetable-map')}
-    className="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-md font-medium"
-  >
-    지도 보기
-  </button>
-</div>
+    <div className="flex justify-between items-center mb-4">
+      <h2 className="text-xl font-bold text-gray-900">시간표 입력</h2>
+      <div className="flex gap-2">
+      <button
+          onClick={() => router.push('/dashboard')}
+          className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-md font-medium"
+        >
+          홈
+        </button>
+        <button
+          onClick={() => router.push('/timetable-map')}
+          className="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-md font-medium"
+        >
+          지도 보기
+        </button>        
+      </div>
+    </div>
+  
 
 
       <input
