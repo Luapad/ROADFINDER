@@ -1,0 +1,11 @@
+sudo systemctl stop roadfinder  //24시간 가동 끄기
+
+sudo systemctl start roadfinder	// 지금만 켜기
+sudo systemctl enable roadfinder	// 24시간 가동 켜기
+sudo lsof -i :8080 // flask 서버 돌아가는지?
+
+현재 map.html 에 노드 고정 상태
+
+=> 지도 수정 필요, map.html에 프론트엔드에서 받은 값 처리하는 방식 필요
+astar.py 경로 => 차, 도보 구분해야함
+
