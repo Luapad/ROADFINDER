@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const weekdays = ['월', '화', '수', '목', '금'] as const;
 type Weekday = typeof weekdays[number];
@@ -37,7 +37,7 @@ const timetable: Record<Weekday, { start: string; end: string }[]> = {
 };
 
 const initialEntries: Record<Weekday, PeriodData[]> = {
-  월: [], 화: [], 수: [], 목: [], 금: []
+  월: [], 화: [], 수: [], 목: [], 금: [],
 };
 
 const timeToMinutes = (time: string) => {
@@ -51,9 +51,17 @@ export default function TimetablePage() {
   const [building, setBuilding] = useState('');
   const [selectedDays, setSelectedDays] = useState<Weekday[]>([]);
   const [selectedPeriods, setSelectedPeriods] = useState<Record<Weekday, number[]>>({
-    월: [], 화: [], 수: [], 목: [], 금: []
+    월: [], 화: [], 수: [], 목: [], 금: [],
   });
   const [entries, setEntries] = useState(initialEntries);
+
+  // ✅ 저장된 시간표 불러오기
+  useEffect(() => {
+    const saved = localStorage.getItem('timetable');
+    if (saved) {
+      setEntries(JSON.parse(saved));
+    }
+  }, []);
 
   const toggleDay = (day: Weekday) => {
     setSelectedDays(prev =>
@@ -66,7 +74,7 @@ export default function TimetablePage() {
       ...prev,
       [day]: prev[day].includes(period)
         ? prev[day].filter(p => p !== period)
-        : [...prev[day], period]
+        : [...prev[day], period],
     }));
   };
 
@@ -88,6 +96,8 @@ export default function TimetablePage() {
     });
 
     setEntries(newEntries);
+    localStorage.setItem('timetable', JSON.stringify(newEntries)); // ✅ 저장
+
     setSubject('');
     setBuilding('');
     setSelectedDays([]);
@@ -213,12 +223,10 @@ export default function TimetablePage() {
                           const updated = { ...prev };
                           weekdays.forEach(wd => {
                             updated[wd] = updated[wd].filter(e =>
-                              !(e.subject === entry.subject &&
-                                e.building === entry.building &&
-                                e.start === entry.start &&
-                                e.end === entry.end)
+                              !(e.subject === entry.subject && e.building === entry.building)
                             );
                           });
+                          localStorage.setItem('timetable', JSON.stringify(updated)); // ✅ 저장 반영
                           return updated;
                         });
                       };

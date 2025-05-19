@@ -1,30 +1,48 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import { useRouter } from 'next/navigation';
-import L, {
+import { useRef, useEffect, useState } from 'react';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+import type {
+  Map as LeafletMap,
   LatLng,
   LatLngExpression,
   LeafletMouseEvent,
   GeoJSON,
-  Map as LeafletMap,
 } from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// ✅ 기본 마커 아이콘 설정
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
-  iconRetinaUrl: undefined,
-});
 
 type NodeMap = {
   [id: string]: { lat: number; lon: number };
 };
 
 type Edge = { from: string; to: string };
+
+type ButtonConfig = {
+  label: string;
+  path: string;
+};
+
+// 커스텀 마커 아이콘
+const routeMarkerIcon = new L.Icon({
+  iconUrl: '/marker_route.png',
+  iconSize: [50, 82],
+  iconAnchor: [25, 82],
+});
+
+const currentMarkerIcon = new L.Icon({
+  iconUrl: '/marker_current.png',
+  iconSize: [50, 82],
+  iconAnchor: [25, 82],
+});
+
+const constructionIcon = new L.Icon({
+  iconUrl: '/error.png',
+  iconSize: [50, 82],
+  iconAnchor: [25, 82],
+});
 
 function findNearestConnectedNode(
   lat: number,
@@ -57,7 +75,15 @@ function findNearestConnectedNode(
   return nearestId;
 }
 
-export default function MapClient() {
+function MapInit({ onReady }: { onReady: (map: LeafletMap) => void }) {
+  const map = useMap();
+  useEffect(() => {
+    onReady(map);
+  }, [map, onReady]);
+  return null;
+}
+
+export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
   const router = useRouter();
   const mapRef = useRef<LeafletMap | null>(null);
   const [currentPos, setCurrentPos] = useState<LatLngExpression | null>(null);
@@ -67,7 +93,20 @@ export default function MapClient() {
   const [markers, setMarkers] = useState<L.Marker[]>([]);
   const routeLayerRef = useRef<GeoJSON | null>(null);
 
-  // 지도 클릭 시 경로 처리
+  useEffect(() => {
+    Promise.all([
+      fetch('/nodes.json').then((res) => res.json()),
+      fetch('/edges.json').then((res) => res.json()),
+    ])
+      .then(([nodesData, edgesData]) => {
+        setNodes(nodesData);
+        setEdges(edgesData);
+      })
+      .catch((err) => {
+        console.error('노드/에지 데이터 로딩 실패:', err);
+      });
+  }, []);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !nodes || !edges) return;
@@ -79,10 +118,11 @@ export default function MapClient() {
         setPoints([]);
         if (routeLayerRef.current) {
           map.removeLayer(routeLayerRef.current);
+          routeLayerRef.current = null;
         }
       }
 
-      const marker = L.marker(e.latlng).addTo(map);
+      const marker = L.marker(e.latlng, { icon: routeMarkerIcon }).addTo(map);
       setMarkers((prev) => [...prev, marker]);
       setPoints((prev) => [...prev, e.latlng]);
 
@@ -126,25 +166,7 @@ export default function MapClient() {
     };
   }, [nodes, edges, markers, points]);
 
-  // 노드/에지 데이터 불러오기
-  useEffect(() => {
-    Promise.all([
-      fetch('/nodes.json').then((res) => res.json()),
-      fetch('/edges.json').then((res) => res.json()),
-    ])
-      .then(([nodesData, edgesData]) => {
-        setNodes(nodesData);
-        setEdges(edgesData);
-      })
-      .catch((err) => {
-        console.error('노드/에지 데이터 로딩 실패:', err);
-      });
-  }, []);
-
-  // 현재 위치 이동
-  const handleLocate = (e: React.MouseEvent) => {
-    e.stopPropagation();
-
+  const handleLocate = () => {
     const map = mapRef.current;
     if (!map) return;
 
@@ -152,41 +174,38 @@ export default function MapClient() {
       (pos) => {
         const { latitude, longitude } = pos.coords;
         const position: LatLngExpression = [latitude, longitude];
-        map.setView(position, 17);
+        map.setView(position, 16);
         setCurrentPos(position);
       },
-      () => alert('위치를 가져올 수 없습니다.')
+      (err) => {
+        alert('위치 정보를 가져올 수 없습니다.');
+        console.error(err);
+      }
     );
   };
 
   return (
     <div className="relative w-full h-screen">
-      <MapContainer
-        center={[35.1744, 126.9094]}
-        zoom={17}
-        style={{ height: '100%', width: '100%' }}
-        ref={mapRef} // ✅ TS에러 없이 map 인스턴스 참조
-      >
+      <MapContainer center={[35.1744, 126.9094]} zoom={15} className="w-full h-full z-0">
+        <MapInit onReady={(map) => (mapRef.current = map)} />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxZoom={20}
-          attribution="&copy; OpenStreetMap contributors"
+          attribution="© OpenStreetMap contributors"
         />
-        {currentPos && <Marker position={currentPos} />}
+        {currentPos && <Marker position={currentPos} icon={currentMarkerIcon} />}
+      {/* <Marker position={[35.1744, 126.9094]} icon={constructionIcon} /> */}
       </MapContainer>
 
-      {/* 버튼: 오른쪽 상단 */}
       <div className="absolute top-4 right-4 flex flex-row gap-2 z-[1000]">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            router.push('/');
-          }}
-          className="bg-white border border-gray-300 rounded-full px-4 py-2 text-sm text-black"
-        >
-          홈
-        </button>
-
+        {buttons.map(({ label, path }) => (
+          <button
+            key={path}
+            onClick={() => router.push(path)}
+            className="bg-white border border-gray-300 rounded-full px-4 py-2 text-sm text-black"
+          >
+            {label}
+          </button>
+        ))}
         <button
           onClick={handleLocate}
           className="bg-white border border-gray-300 rounded-full px-4 py-2 text-sm text-black"

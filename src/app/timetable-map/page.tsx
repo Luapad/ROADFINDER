@@ -2,10 +2,15 @@
 
 import dynamic from 'next/dynamic';
 
-const MapClient = dynamic(() => import('./MapClient'), {
-  ssr: false, 
-});
+const MapClient = dynamic(() => import('../../../components/Mapclient'), { ssr: false });
 
-export default function TimetableMapPage() {
-  return <MapClient />;
+export default function Page() {
+  return (
+    <MapClient
+      buttons={[
+        { label: '홈', path: '/dashboard' },
+        { label: '시간표', path: '/timetable' },
+      ]}
+    />
+  );
 }

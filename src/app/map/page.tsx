@@ -1,11 +1,9 @@
-'use client'; 
+'use client';
 
 import dynamic from 'next/dynamic';
 
-const MapClient = dynamic(() => import('./MapClient'), {
-  ssr: false, 
-});
+const MapClient = dynamic(() => import('../../../components/Mapclient'), { ssr: false });
 
-export default function MapPage() {
-  return <MapClient />;
+export default function Page() {
+  return <MapClient buttons={[{ label: '홈', path: '/' }]} />;
 }
