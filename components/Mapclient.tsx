@@ -25,24 +25,21 @@ type ButtonConfig = {
   path: string;
 };
 
-// 커스텀 마커 아이콘
-const routeMarkerIcon = new L.Icon({
-  iconUrl: '/marker_route.png',
-  iconSize: [50, 82],
-  iconAnchor: [25, 82],
-});
+// 마커 생성 함수: anchor만 사용, offset 없음
+const createResponsiveIcon = (
+  className: string,
+  size: [number, number],
+  anchor: [number, number]
+) =>
+  L.divIcon({
+    html: `<div class="${className}"></div>`,
+    className: '',
+    iconSize: size,
+    iconAnchor: anchor,
+  });
 
-const currentMarkerIcon = new L.Icon({
-  iconUrl: '/marker_current.png',
-  iconSize: [50, 82],
-  iconAnchor: [25, 82],
-});
-
-const constructionIcon = new L.Icon({
-  iconUrl: '/error.png',
-  iconSize: [50, 82],
-  iconAnchor: [25, 82],
-});
+const routeMarkerIcon = createResponsiveIcon('route-marker-inner', [50, 50], [25, 50]);
+const currentMarkerIcon = createResponsiveIcon('current-marker-inner', [25, 50], [12.5, 50]);
 
 function findNearestConnectedNode(
   lat: number,
@@ -166,6 +163,27 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
     };
   }, [nodes, edges, markers, points]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const onZoom = () => {
+      const zoom = map.getZoom();
+      const scale = zoom / 15;
+      const elements = document.querySelectorAll('.route-marker-inner, .current-marker-inner');
+      elements.forEach((el) => {
+        (el as HTMLElement).style.setProperty('--scale', `${scale}`);
+      });
+    };
+
+    map.on('zoomend', onZoom);
+    onZoom();
+
+    return () => {
+      map.off('zoomend', onZoom);
+    };
+  }, []);
+
   const handleLocate = () => {
     const map = mapRef.current;
     if (!map) return;
@@ -174,7 +192,7 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
       (pos) => {
         const { latitude, longitude } = pos.coords;
         const position: LatLngExpression = [latitude, longitude];
-        map.setView(position, 16);
+        map.setView(position, 17);
         setCurrentPos(position);
       },
       (err) => {
@@ -186,14 +204,13 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
 
   return (
     <div className="relative w-full h-screen">
-      <MapContainer center={[35.1744, 126.9094]} zoom={15} className="w-full h-full z-0">
+      <MapContainer center={[35.1744, 126.9094]} zoom={16} className="w-full h-full z-0">
         <MapInit onReady={(map) => (mapRef.current = map)} />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="© OpenStreetMap contributors"
         />
         {currentPos && <Marker position={currentPos} icon={currentMarkerIcon} />}
-      {/* <Marker position={[35.1744, 126.9094]} icon={constructionIcon} /> */}
       </MapContainer>
 
       <div className="absolute top-4 right-4 flex flex-row gap-2 z-[1000]">
