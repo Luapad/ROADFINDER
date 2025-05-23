@@ -1,7 +1,7 @@
 # app.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS  # ✅ 추가
-from astar import astar, nodes
+from astar import astar, load_data
 
 app = Flask(__name__)
 CORS(app)  # ← CORS 허용 추가
@@ -12,10 +12,12 @@ def route():
     start = data.get("start")
     goal = data.get("goal")
 
+    nodes, graph = load_data()
+
     if start not in nodes or goal not in nodes:
         return jsonify({"error": "Invalid node ID"}), 400
 
-    path = astar(start, goal)
+    path = astar(start, goal, nodes, graph)
     if not path:
         return jsonify({"error": "No path found"}), 404
 
