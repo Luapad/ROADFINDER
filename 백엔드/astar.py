@@ -4,42 +4,38 @@ import json
 import heapq
 from collections import defaultdict
 
-# 파일 경로
-NODES_PATH = "nodes.json"
-EDGES_PATH = "edges.json"
+def load_data():
+    with open("nodes.json", encoding="utf-8") as f:
+        nodes = json.load(f)
+    with open("edges.json", encoding="utf-8") as f:
+        edges = json.load(f)
 
-# 데이터 불러오기
-with open(NODES_PATH, encoding="utf-8") as f:
-    nodes = json.load(f)
+    graph = defaultdict(list)
+    for edge in edges:
+        from_id = edge["from"]
+        to_id = edge["to"]
+        if from_id in nodes and to_id in nodes:
+            lat1, lon1 = nodes[from_id]["lat"], nodes[from_id]["lon"]
+            lat2, lon2 = nodes[to_id]["lat"], nodes[to_id]["lon"]
+            dist = math.hypot(lat2 - lat1, lon2 - lon1)
+            graph[from_id].append((to_id, dist))
+            graph[to_id].append((from_id, dist))
 
-with open(EDGES_PATH, encoding="utf-8") as f:
-    edges = json.load(f)
-
-# 그래프 구성 (양방향)
-graph = defaultdict(list)
-for edge in edges:
-    from_id = edge["from"]
-    to_id = edge["to"]
-    if from_id in nodes and to_id in nodes:
-        lat1, lon1 = nodes[from_id]["lat"], nodes[from_id]["lon"]
-        lat2, lon2 = nodes[to_id]["lat"], nodes[to_id]["lon"]
-        dist = math.hypot(lat2 - lat1, lon2 - lon1)
-        graph[from_id].append((to_id, dist))
-        graph[to_id].append((from_id, dist))
+    return nodes, graph
 
 # 휴리스틱 함수: 유클리디안 거리
-def heuristic(n1, n2):
+def heuristic(n1, n2, nodes):
     lat1, lon1 = nodes[n1]["lat"], nodes[n1]["lon"]
     lat2, lon2 = nodes[n2]["lat"], nodes[n2]["lon"]
     return math.hypot(lat2 - lat1, lon2 - lon1)
 
 # A* 알고리즘 함수
-def astar(start, goal):
+def astar(start, goal, nodes, graph):
     open_set = []
     heapq.heappush(open_set, (0, start))
     came_from = {}
     g_score = {start: 0}
-    f_score = {start: heuristic(start, goal)}
+    f_score = {start: heuristic(start, goal, nodes)}
 
     while open_set:
         _, current = heapq.heappop(open_set)
@@ -56,7 +52,7 @@ def astar(start, goal):
             if neighbor not in g_score or tentative_g < g_score[neighbor]:
                 came_from[neighbor] = current
                 g_score[neighbor] = tentative_g
-                f_score[neighbor] = tentative_g + heuristic(neighbor, goal)
+                f_score[neighbor] = tentative_g + heuristic(neighbor, goal, nodes)
                 heapq.heappush(open_set, (f_score[neighbor], neighbor))
 
     return None  # 실패 시

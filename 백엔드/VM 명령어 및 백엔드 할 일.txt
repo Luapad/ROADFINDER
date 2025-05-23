@@ -1,0 +1,23 @@
+GCP VM 모든 파일은 /home/shared/roadfinder 에서 진행 [개인 폴더에서 작업 시 공유 불가능]
+파일 열기 (vim도 될걸?)
+- nano [파일 이름]
+  Ctrl+k  한 줄 삭제
+  Ctrl+O , Enter 저장
+  Ctrl+X  파일 나가기
+
+sudo systemctl stop roadfinder  //24시간 가동 끄기
+
+sudo systemctl start roadfinder	// 지금만 켜기
+sudo systemctl enable roadfinder	// 24시간 가동 켜기
+sudo lsof -i :8080 // flask 서버 돌아가는지?
+
+이 외 필요해 보이는 명령어 있으면 추가해주기
+
+
+백엔드 해야 할 일
+
+1. 지도 수정 필요
+2. astar.py 건물 내부 경로 가중치 추가
+3. astar.py 경로 => 차, 도보 구분해야함(Beta)
+4. DB 에 데이터 집어넣기.
+
