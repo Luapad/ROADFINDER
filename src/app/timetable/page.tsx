@@ -63,6 +63,18 @@ export default function TimetablePage() {
     }
   }, []);
 
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      localStorage.removeItem('timetable');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      {/*localStorage.removeItem('timetable'); // 페이지 이동 시 삭제*/}
+    };
+  }, []);
+
   const toggleDay = (day: Weekday) => {
     setSelectedDays(prev =>
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]

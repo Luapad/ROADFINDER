@@ -27,10 +27,13 @@ export default function LogoutButton() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    setLoggedIn(false);
-    router.push('/');
-  };
+  localStorage.removeItem('isLoggedIn');
+  localStorage.removeItem('timetable');
+  window.location.href = '/'; // ✅ 완전 새로고침하면서 홈으로
+};
+
+
+
 
   if (!mounted || loggedIn !== true) return null;
 
