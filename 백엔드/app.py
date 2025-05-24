@@ -44,8 +44,10 @@ def nearest_node():
         nodes = json.load(f)
     with open("edges.json", encoding="utf-8") as f:
         edges = json.load(f)
+        
+        nearest_id = find_nearest_connected_node(lat, lon, nodes, edges)
+    nearest_id = str(nearest_id)
 
-    nearest_id = find_nearest_connected_node(lat, lon, nodes, edges)
     if nearest_id is None:
         return jsonify({"error": "No connected node found"}), 404
 
@@ -85,7 +87,7 @@ def route():
             }
         })
 
-    geojson = {
+        geojson = {
         "type": "FeatureCollection",
         "features": features
     }
