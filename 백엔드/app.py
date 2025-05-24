@@ -1,10 +1,55 @@
 # app.py
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # ✅ 추가
+from flask_cors import CORS
+import math
+import json
 from astar import astar, load_data
 
 app = Flask(__name__)
-CORS(app)  # ← CORS 허용 추가
+CORS(app)
+
+def find_nearest_connected_node(lat, lon, nodes, edges):
+    connected_ids = set()
+    for edge in edges:
+        connected_ids.add(edge['from'])
+        connected_ids.add(edge['to'])
+
+    min_dist = float('inf')
+    nearest_id = None
+
+    for id, node in nodes.items():
+        if id not in connected_ids:
+            continue
+
+        dx = node['lat'] - lat
+        dy = node['lon'] - lon
+        dist = math.hypot(dx, dy)
+
+        if dist < min_dist:
+            min_dist = dist
+            nearest_id = id
+
+    return nearest_id
+
+@app.route("/nearest-node", methods=["POST"])
+def nearest_node():
+    data = request.get_json()
+    lat = data.get("lat")
+    lon = data.get("lon")
+
+    if lat is None or lon is None:
+        return jsonify({"error": "Missing lat/lon"}), 400
+
+    with open("nodes.json", encoding="utf-8") as f:
+        nodes = json.load(f)
+    with open("edges.json", encoding="utf-8") as f:
+        edges = json.load(f)
+
+    nearest_id = find_nearest_connected_node(lat, lon, nodes, edges)
+    if nearest_id is None:
+        return jsonify({"error": "No connected node found"}), 404
+
+    return jsonify({"nearest_id": nearest_id})
 
 @app.route("/route", methods=["POST"])
 def route():
@@ -21,7 +66,6 @@ def route():
     if not path:
         return jsonify({"error": "No path found"}), 404
 
-    # GeoJSON 형식으로 응답
     features = []
     for i in range(len(path) - 1):
         n1 = nodes[path[i]]

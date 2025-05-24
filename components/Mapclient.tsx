@@ -25,7 +25,6 @@ type ButtonConfig = {
   path: string;
 };
 
-// 마커 생성 함수: anchor만 사용, offset 없음
 const createResponsiveIcon = (
   className: string,
   size: [number, number],
@@ -40,45 +39,6 @@ const createResponsiveIcon = (
 
 const routeMarkerIcon = createResponsiveIcon('route-marker-inner', [50, 50], [25, 50]);
 const currentMarkerIcon = createResponsiveIcon('current-marker-inner', [25, 50], [12.5, 50]);
-
-function findNearestConnectedNode(
-  lat: number,
-  lon: number,
-  nodes: NodeMap,
-  edges: Edge[]
-): string | null {
-  const connectedIds = new Set<string>();
-  for (const edge of edges) {
-    connectedIds.add(edge.from);
-    connectedIds.add(edge.to);
-  }
-
-  let minDist = Infinity;
-  let nearestId: string | null = null;
-
-  for (const [id, node] of Object.entries(nodes)) {
-    if (!connectedIds.has(id)) continue;
-
-    const dx = node.lat - lat;
-    const dy = node.lon - lon;
-    const dist = Math.hypot(dx, dy);
-
-    if (dist < minDist) {
-      minDist = dist;
-      nearestId = id;
-    }
-  }
-
-  return nearestId;
-}
-
-function MapInit({ onReady }: { onReady: (map: LeafletMap) => void }) {
-  const map = useMap();
-  useEffect(() => {
-    onReady(map);
-  }, [map, onReady]);
-  return null;
-}
 
 export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
   const router = useRouter();
@@ -104,6 +64,23 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
       });
   }, []);
 
+  const getNearestNodeId = async (lat: number, lon: number): Promise<string | null> => {
+    try {
+      const res = await fetch('http://34.47.125.86:8080/nearest-node', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lon }),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.nearest_id;
+    } catch (err) {
+      console.error('서버 요청 실패:', err);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !nodes || !edges) return;
@@ -127,8 +104,8 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
         const start = points[0];
         const goal = e.latlng;
 
-        const startId = findNearestConnectedNode(start.lat, start.lng, nodes, edges);
-        const goalId = findNearestConnectedNode(goal.lat, goal.lng, nodes, edges);
+        const startId = await getNearestNodeId(start.lat, start.lng);
+        const goalId = await getNearestNodeId(goal.lat, goal.lng);
 
         if (!startId || !goalId) {
           alert('연결된 노드를 찾을 수 없습니다.');
@@ -201,6 +178,14 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
       }
     );
   };
+
+  function MapInit({ onReady }: { onReady: (map: LeafletMap) => void }) {
+    const map = useMap();
+    useEffect(() => {
+      onReady(map);
+    }, [map, onReady]);
+    return null;
+  }
 
   return (
     <div className="relative w-full h-screen">
