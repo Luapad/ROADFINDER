@@ -17,7 +17,7 @@ export default function RootLayout({
     <html lang="ko">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/icon-192.png" />
+        <link rel="icon" href="/roadfinder.png" />
         <meta name="theme-color" content="#317EFB" />
       </head>
       <body className={`${inter.className} bg-gray-100 min-h-screen flex items-center justify-center`}>

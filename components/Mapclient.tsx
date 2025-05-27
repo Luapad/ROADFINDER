@@ -66,7 +66,7 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
 
   const getNearestNodeId = async (lat: number, lon: number): Promise<string | null> => {
     try {
-      const res = await fetch('http://34.47.125.86:8080/nearest-node', {
+      const res = await fetch('/api/nearest-node', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lat, lon }),
@@ -113,7 +113,7 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
         }
 
         try {
-          const res = await fetch('http://34.47.125.86:8080/route', {
+          const res = await fetch('/api/route', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ start: startId, goal: goalId }),
