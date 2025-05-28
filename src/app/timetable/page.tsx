@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import CategoryDropdown from '../../../components/dropdown';
 
 const weekdays = ['월', '화', '수', '목', '금'] as const;
 type Weekday = typeof weekdays[number];
@@ -48,6 +49,8 @@ const timeToMinutes = (time: string) => {
 export default function TimetablePage() {
   const router = useRouter();
   const [subject, setSubject] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [buildingOptions, setBuildingOptions] = useState<string[]>([]);
   const [building, setBuilding] = useState('');
   const [selectedDays, setSelectedDays] = useState<Weekday[]>([]);
   const [selectedPeriods, setSelectedPeriods] = useState<Record<Weekday, number[]>>({
@@ -55,7 +58,6 @@ export default function TimetablePage() {
   });
   const [entries, setEntries] = useState(initialEntries);
 
-  // ✅ 저장된 시간표 불러오기
   useEffect(() => {
     const saved = localStorage.getItem('timetable');
     if (saved) {
@@ -71,9 +73,21 @@ export default function TimetablePage() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      {/*localStorage.removeItem('timetable'); // 페이지 이동 시 삭제*/}
     };
   }, []);
+
+  useEffect(() => {
+    if (!selectedCategory) return;
+
+    fetch('/api/buildings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: selectedCategory }),
+    })
+      .then(res => res.json())
+      .then(data => setBuildingOptions(data.buildings || []))
+      .catch(() => setBuildingOptions([]));
+  }, [selectedCategory]);
 
   const toggleDay = (day: Weekday) => {
     setSelectedDays(prev =>
@@ -108,12 +122,14 @@ export default function TimetablePage() {
     });
 
     setEntries(newEntries);
-    localStorage.setItem('timetable', JSON.stringify(newEntries)); // ✅ 저장
+    localStorage.setItem('timetable', JSON.stringify(newEntries));
 
     setSubject('');
     setBuilding('');
+    setSelectedCategory('');
     setSelectedDays([]);
     setSelectedPeriods({ 월: [], 화: [], 수: [], 목: [], 금: [] });
+    setBuildingOptions([]);
   };
 
   const timeSlots = Array.from({ length: 18 }, (_, i) => {
@@ -149,13 +165,23 @@ export default function TimetablePage() {
         value={subject}
         onChange={e => setSubject(e.target.value)}
       />
-      <input
-        type="text"
-        placeholder="건물명"
-        className="w-full border rounded-md p-2 mb-4 text-gray-900 placeholder-gray-600"
+
+      <CategoryDropdown value={selectedCategory} onChange={setSelectedCategory} />
+
+      <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-700 mb-1">건물명2</label>
+      <select
         value={building}
         onChange={e => setBuilding(e.target.value)}
-      />
+        className="w-full border rounded-md p-2 mb-4 text-gray-900 placeholder-gray-600 bg-white"
+      >
+        <option value="">선택하세요</option>
+        {buildingOptions.map(b => (
+        <option key={b} value={b}>{b}</option>
+        ))}
+      </select>
+      </div>
+
 
       <div className="flex gap-2 mb-4 justify-center">
         {weekdays.map(day => (
@@ -238,7 +264,7 @@ export default function TimetablePage() {
                               !(e.subject === entry.subject && e.building === entry.building)
                             );
                           });
-                          localStorage.setItem('timetable', JSON.stringify(updated)); // ✅ 저장 반영
+                          localStorage.setItem('timetable', JSON.stringify(updated));
                           return updated;
                         });
                       };
