@@ -5,8 +5,12 @@ GCP VM 모든 파일은 /home/shared/roadfinder 에서 진행 [개인 폴더에�
   Ctrl+O , Enter 저장
   Ctrl+X  파일 나가기
 
-sudo systemctl stop roadfinder  //24시간 가동 끄기
+※ DB 접근 방법
+mysql -u root -p -D roadfinderdb
+비밀번호:1234 (리눅스라 비번쳐도 안보임)
 
+
+sudo systemctl stop roadfinder  //24시간 가동 끄기
 sudo systemctl start roadfinder	// 지금만 켜기
 sudo systemctl enable roadfinder	// 24시간 가동 켜기
 sudo lsof -i :8080 // flask 서버 돌아가는지?
