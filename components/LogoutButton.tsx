@@ -5,37 +5,31 @@ import { useRouter } from 'next/navigation';
 
 export default function LogoutButton() {
   const router = useRouter();
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null); 
-  const [mounted, setMounted] = useState(false); 
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const checkLogin = () => {
-      const status = localStorage.getItem('isLoggedIn') === 'true';
-      setLoggedIn(status);
+    const checkToken = () => {
+      const token = localStorage.getItem('token');
+      setLoggedIn(!!token); 
     };
 
-    setMounted(true);
-    checkLogin();
+    checkToken();
 
-    window.addEventListener('storage', checkLogin);
-    window.addEventListener('login', checkLogin);
+    window.addEventListener('storage', checkToken);
+    window.addEventListener('login', checkToken);
 
     return () => {
-      window.removeEventListener('storage', checkLogin);
-      window.removeEventListener('login', checkLogin);
+      window.removeEventListener('storage', checkToken);
+      window.removeEventListener('login', checkToken);
     };
   }, []);
 
   const handleLogout = () => {
-  localStorage.removeItem('isLoggedIn');
-  localStorage.removeItem('timetable');
-  window.location.href = '/'; // ✅ 완전 새로고침하면서 홈으로
-};
+    localStorage.removeItem('token');
+    window.location.href = '/';
+  };
 
-
-
-
-  if (!mounted || loggedIn !== true) return null;
+  if (loggedIn !== true) return null;
 
   return (
     <button

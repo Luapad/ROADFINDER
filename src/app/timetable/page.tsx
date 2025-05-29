@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import CategoryDropdown from '../../../components/dropdown';
 
 const weekdays = ['월', '화', '수', '목', '금'] as const;
@@ -58,23 +58,28 @@ export default function TimetablePage() {
   });
   const [entries, setEntries] = useState(initialEntries);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('timetable');
-    if (saved) {
-      setEntries(JSON.parse(saved));
-    }
-  }, []);
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
 
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      localStorage.removeItem('timetable');
-    };
+useEffect(() => {
+  fetch(`/api/timetable?userId=${userId}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.entries) {
+        const filledEntries: typeof entries = { 월: [], 화: [], 수: [], 목: [], 금: [] };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, []);
+        (Object.entries(data.entries) as [Weekday, PeriodData[]][]).forEach(([day, list]) => {
+          filledEntries[day] = list.map(entry => ({
+            ...entry,
+            color: entry.color || `hsl(${Math.floor(Math.random() * 360)}, 80%, 85%)`,
+          }));
+        });
+
+        setEntries(filledEntries);
+      }
+    })
+    .catch(() => setEntries(initialEntries));
+}, []);
+
 
   useEffect(() => {
     if (!selectedCategory) return;
@@ -118,18 +123,33 @@ export default function TimetablePage() {
       const start = timetable[day][sorted[0]].start;
       const end = timetable[day][sorted[sorted.length - 1]].end;
 
+      if (!newEntries[day]) newEntries[day] = [];
       newEntries[day].push({ subject, building, start, end, color });
     });
 
     setEntries(newEntries);
-    localStorage.setItem('timetable', JSON.stringify(newEntries));
-
     setSubject('');
     setBuilding('');
     setSelectedCategory('');
     setSelectedDays([]);
     setSelectedPeriods({ 월: [], 화: [], 수: [], 목: [], 금: [] });
     setBuildingOptions([]);
+  };
+
+  const handleSave = async () => {
+
+    console.log('userId:', userId);
+
+  // entries 구조 확인
+  console.log('entries:', JSON.stringify(entries, null, 2));
+
+    await fetch('/api/timetable', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, entries }),
+    });
+
+    alert('시간표가 저장되었습니다.');
   };
 
   const timeSlots = Array.from({ length: 18 }, (_, i) => {
@@ -169,19 +189,18 @@ export default function TimetablePage() {
       <CategoryDropdown value={selectedCategory} onChange={setSelectedCategory} />
 
       <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-1">건물명2</label>
-      <select
-        value={building}
-        onChange={e => setBuilding(e.target.value)}
-        className="w-full border rounded-md p-2 mb-4 text-gray-900 placeholder-gray-600 bg-white"
-      >
-        <option value="">선택하세요</option>
-        {buildingOptions.map(b => (
-        <option key={b} value={b}>{b}</option>
-        ))}
-      </select>
+        <label className="block text-sm font-medium text-gray-700 mb-1">건물명</label>
+        <select
+          value={building}
+          onChange={e => setBuilding(e.target.value)}
+          className="w-full border rounded-md p-2 mb-4 text-gray-900 placeholder-gray-600 bg-white"
+        >
+          <option value="">선택하세요</option>
+          {buildingOptions.map(b => (
+            <option key={b} value={b}>{b}</option>
+          ))}
+        </select>
       </div>
-
 
       <div className="flex gap-2 mb-4 justify-center">
         {weekdays.map(day => (
@@ -222,9 +241,16 @@ export default function TimetablePage() {
 
       <button
         onClick={handleAdd}
-        className="w-full bg-blue-600 text-white py-2 rounded-md mb-4 font-semibold"
+        className="w-full bg-blue-600 text-white py-2 rounded-md mb-2 font-semibold"
       >
         강의 추가
+      </button>
+
+      <button
+        onClick={handleSave}
+        className="w-full bg-green-600 text-white py-2 rounded-md mb-4 font-semibold"
+      >
+        시간표 저장
       </button>
 
       <div className="w-full">
@@ -249,7 +275,8 @@ export default function TimetablePage() {
                     )}
                   </td>
                   {weekdays.map(day => {
-                    const entry = entries[day].find(e => timeToMinutes(e.start) === timeToMinutes(slot));
+                    const dayEntries = entries[day] ?? [];
+                    const entry = dayEntries.find(e => timeToMinutes(e.start) === timeToMinutes(slot));
                     if (entry) {
                       const span = (timeToMinutes(entry.end) - timeToMinutes(entry.start)) / 30;
 
@@ -259,12 +286,7 @@ export default function TimetablePage() {
 
                         setEntries(prev => {
                           const updated = { ...prev };
-                          weekdays.forEach(wd => {
-                            updated[wd] = updated[wd].filter(e =>
-                              !(e.subject === entry.subject && e.building === entry.building)
-                            );
-                          });
-                          localStorage.setItem('timetable', JSON.stringify(updated));
+                          updated[day] = updated[day].filter(e => e !== entry);
                           return updated;
                         });
                       };
@@ -286,7 +308,7 @@ export default function TimetablePage() {
                       );
                     }
 
-                    const isCovered = entries[day].some(e =>
+                    const isCovered = dayEntries.some(e =>
                       timeToMinutes(e.start) < timeToMinutes(slot) &&
                       timeToMinutes(e.end) > timeToMinutes(slot)
                     );

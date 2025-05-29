@@ -2,27 +2,19 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import LogoutButton from '../../../components/LogoutButton'; // ✅ 로그아웃 버튼 import
+import LogoutButton from '../../../components/LogoutButton';
 
 export default function DashboardPage() {
   const router = useRouter();
 
-  useEffect(() => {
-    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (!loggedIn) {
-      alert('로그인이 필요합니다.');
-      router.push('/');
-    }
-  }, [router]);
+ 
 
   return (
     <div className="w-full min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 relative">
-      {/* ✅ 우측 상단 고정 로그아웃 버튼 */}
       <div className="absolute top-4 right-4 z-50">
         <LogoutButton />
       </div>
 
-      {/* 이미지 버튼 3개 */}
       <div className="grid grid-cols-1 gap-8">
         <div
           onClick={() => router.push('/timetable')}
@@ -59,6 +51,7 @@ export default function DashboardPage() {
           />
           <span className="mt-3 font-semibold text-sm text-gray-700">지도 및 길찾기</span>
         </div>
+        
       </div>
     </div>
   );

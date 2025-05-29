@@ -8,20 +8,38 @@ export default function Home() {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    if (id && password) {
-      localStorage.setItem('isLoggedIn', 'true');
-      window.dispatchEvent(new Event('login'));
-      router.push('/dashboard');
+  const handleLogin = async () => {
+    if (!id || !password) {
+      alert('아이디와 비밀번호를 입력하세요.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: id, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userId', id);
+
+        router.push('/dashboard');
+      } else {
+        alert(data.message || '로그인에 실패했습니다.');
+      }
+    } catch (error) {
+      alert('서버 오류가 발생했습니다.');
     }
   };
 
+
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50">
-      {/* 전체 form 컨테이너 */}
       <div className="flex flex-col gap-4 w-full max-w-md px-4">
-        {/* 앱 아이콘 - 버튼과 입력창 폭과 통일 */}
-
         <h1 className="text-2xl font-bold text-center text-gray-800 mb-2">
           로드파인더
         </h1>
@@ -50,10 +68,19 @@ export default function Home() {
 
         <button
           onClick={handleLogin}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-base"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-base mb-0"
         >
           로그인
         </button>
+
+        <div className="w-full flex justify-end -mt-3.5">
+          <span
+            onClick={() => router.push('/sign-up')}
+            className="text-sm text-gray-600 hover:underline cursor-pointer"
+          >
+          회원가입
+          </span>
+        </div>
 
         <button
           onClick={() => router.push('/map')}

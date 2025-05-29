@@ -1,4 +1,3 @@
-
 'use client';
 
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
@@ -6,32 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useRef, useEffect, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-
-import type {
-  Map as LeafletMap,
-  LatLng,
-  LatLngExpression,
-  LeafletMouseEvent,
-  GeoJSON,
-} from 'leaflet';
-
+import type { Map as LeafletMap, LatLng, LatLngExpression, LeafletMouseEvent, GeoJSON} from 'leaflet';
 import CategoryDropdown from '../components/dropdown';
 
-type NodeMap = {
-  [id: string]: { lat: number; lon: number };
-};
-
+type NodeMap = { [id: string]: { lat: number; lon: number };};
 type Edge = { from: string; to: string };
-
-type ButtonConfig = {
-  label: string;
-  path: string;
-};
-
-type BuildingInfo = {
-  lat: number;
-  lon: number;
-};
+type ButtonConfig = { label: string; path: string;};
+type BuildingInfo = { lat: number; lon: number;};
 
 const createResponsiveIcon = (
   className: string,
@@ -44,7 +24,6 @@ const createResponsiveIcon = (
     iconSize: size,
     iconAnchor: anchor,
   });
-
 const routeMarkerIcon = createResponsiveIcon('route-marker-inner', [50, 50], [25, 50]);
 const currentMarkerIcon = createResponsiveIcon('current-marker-inner', [25, 50], [12.5, 50]);
 
@@ -57,7 +36,6 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
   const [points, setPoints] = useState<LatLng[]>([]);
   const [markers, setMarkers] = useState<L.Marker[]>([]);
   const routeLayerRef = useRef<GeoJSON | null>(null);
-
   const [showSearch, setShowSearch] = useState(false);
   const [startCategory, setStartCategory] = useState('');
   const [endCategory, setEndCategory] = useState('');
