@@ -1,8 +1,10 @@
 // app/map-timetable/page.tsx
+'use client';
+
 import dynamic from 'next/dynamic';
 
-const MapTimetable = dynamic(() => import('../../..//components/map-timetable'), {
-  ssr: false, // ❗ 서버에서 렌더링 안 하게 설정
+const MapTimetable = dynamic(() => import('../../../components/map-timetable'), {
+  ssr: false,
 });
 
 export default function MapTimetablePage() {
