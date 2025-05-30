@@ -22,14 +22,14 @@ export default function DashboardPage() {
         >
           <img
             src="/timetable.png"
-            alt="시간표 입력"
+            alt="시간표"
             className="w-32 h-32 object-contain"
           />
-          <span className="mt-3 font-semibold text-sm text-gray-700">시간표 입력</span>
+          <span className="mt-3 font-semibold text-sm text-gray-700">시간표</span>
         </div>
 
         <div
-          onClick={() => alert('강의실 위치 기능은 준비 중입니다.')}
+          onClick={() => router.push('/map-timetable')}
           className="flex flex-col items-center cursor-pointer"
         >
           <img
@@ -41,7 +41,7 @@ export default function DashboardPage() {
         </div>
 
         <div
-          onClick={() => router.push('/timetable-map')}
+          onClick={() => router.push('/map-member')}
           className="flex flex-col items-center cursor-pointer"
         >
           <img

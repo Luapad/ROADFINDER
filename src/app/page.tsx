@@ -83,7 +83,7 @@ export default function Home() {
         </div>
 
         <button
-          onClick={() => router.push('/map')}
+          onClick={() => router.push('/map-nonmember')}
           className="w-full bg-gray-200 hover:bg-gray-300 border border-gray-300 text-gray-800 font-semibold py-3 px-4 rounded-xl text-base"
         >
           지도 및 길찾기
@@ -91,4 +91,4 @@ export default function Home() {
       </div>
     </main>
   );
-}
+} 

@@ -169,12 +169,6 @@ useEffect(() => {
           >
             홈
           </button>
-          <button
-            onClick={() => router.push('/timetable-map')}
-            className="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-md font-medium"
-          >
-            지도 보기
-          </button>
         </div>
       </div>
 
