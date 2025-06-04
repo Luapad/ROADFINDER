@@ -1,6 +1,7 @@
 # app.py
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
+from flask_bcrypt import Bcrypt
 import math
 import jwt
 import json
@@ -9,6 +10,7 @@ from astar import astar, load_data
 
 app = Flask(__name__)
 CORS(app)
+bcrypt = Bcrypt(app)
 
 
 # DB 연결 설정
@@ -20,10 +22,60 @@ db = pymysql.connect(
     cursorclass=pymysql.cursors.DictCursor
 )
 
-
-
-
 SECRET_KEY = 'my-super-secret-key-123!'
+
+
+# 유효성 검사는 실제 토큰 구조나 시크릿 기반 검증 필요
+def validate_refresh_token(token):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        # 토큰이 만료되었으면 jwt.ExpiredSignatureError 발생
+        # 필요하면 payload 내 특정 값도 검사 가능
+        return True
+    except jwt.ExpiredSignatureError:
+        print("리프레시 토큰 만료")
+        return False
+    except jwt.InvalidTokenError:
+        print("리프레시 토큰 유효하지 않음")
+        return False
+
+def create_new_access_token(user_id, user_name):
+    now = datetime.datetime.utcnow()
+    payload = {
+        'UserID': user_id,
+        'UserName': user_name,
+        'exp': now + datetime.timedelta(hours=1)  # 1시간 유효
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
+@app.route('/api/refresh', methods=['POST'])
+def refresh():
+    refresh_token = request.cookies.get('refresh_token')
+
+    if not refresh_token or not validate_refresh_token(refresh_token):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=['HS256'])
+        user_id = payload['UserID']
+        user_name = payload['UserName']
+
+    except Exception as e:
+        return jsonify({'error': 'Invalid token'}), 401
+
+    new_access_token = create_new_access_token()
+
+    resp = make_response(jsonify({'message': '새 액세스 토큰 발급'}))
+    resp.set_cookie(
+        'access_token',
+        new_access_token,
+        httponly=True,
+        secure=True,
+        samesite='Strict',
+        max_age=3600  # 1시간
+    )
+    return resp
+
 
 
 @app.route('/api/map-timetable', methods=['POST'])
@@ -151,41 +203,66 @@ def load_timetable():
 
 
 
-
-
-
 @app.route('/api/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
         user_id = data.get('userId')
         password = data.get('password')
+        remember = data.get('remember', False)
 
         if not user_id or not password:
             return jsonify({'message': '아이디와 비밀번호를 입력해주세요.'}), 400
 
         with db.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM user WHERE UserID = %s AND Password = %s",
-                (user_id, password)
-            )
+            cursor.execute("SELECT * FROM `user` WHERE UserID = %s", (user_id,))
             user = cursor.fetchone()
 
-        if user:
-            # exp 없이 간단한 토큰 발급
-            token = jwt.encode({
-                'UserID': user['UserID'],
-                'UserName': user['UserName']
-            }, SECRET_KEY, algorithm='HS256')
-
-            return jsonify({'token': token}), 200
-        else:
+        if not user or not check_password_hash(user['Password'], password):
             return jsonify({'message': '아이디 또는 비밀번호가 일치하지 않습니다.'}), 401
+
+        now = datetime.datetime.utcnow()
+
+        # Access Token: 1시간 유효
+        access_payload = {
+            'UserID': user['UserID'],
+            'UserName': user['UserName'],
+            'exp': now + datetime.timedelta(hours=1)
+        }
+        access_token = jwt.encode(access_payload, SECRET_KEY, algorithm='HS256')
+
+        resp = make_response(jsonify({'message': '로그인 성공'}))
+        resp.set_cookie(
+            'access_token',
+            access_token,
+            httponly=True,
+            secure=True,
+            samesite='Strict',
+            max_age=3600  # 1시간
+        )
+
+        if remember:
+            # Refresh Token: 30일 유효
+            refresh_payload = {
+                'UserID': user['UserID'],
+                'UserName': user['UserName'],
+                'exp': now + datetime.timedelta(days=30)
+            }
+            refresh_token = jwt.encode(refresh_payload, SECRET_KEY, algorithm='HS256')
+            resp.set_cookie(
+                'refresh_token',
+                refresh_token,
+                httponly=True,
+                secure=True,
+                samesite='Strict',
+                max_age=60 * 60 * 24 * 30  # 30일
+            )
+
+        return resp
 
     except Exception as e:
         print("로그인 중 에러:", e, flush=True)
         return jsonify({'message': '서버 오류가 발생했습니다.'}), 500
-
 
 
 @app.route('/api/sign-up', methods=['POST'])
@@ -203,13 +280,15 @@ def sign_up():
         if not all([user_id, password, name, phone, email]):
             return jsonify({'error': '모든 필드를 입력해야 합니다.'}), 400
 
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
         with db.cursor() as cursor:
 
             # 새 사용자 INSERT
             cursor.execute("""
-                INSERT INTO user  (UserID, Password, UserName, PhoneNumber, email)
+                INSERT INTO `user`  (UserID, Password, UserName, PhoneNumber, email)
                 VALUES (%s, %s, %s, %s, %s)
-            """, (user_id, password, name, phone, email))
+            """, (user_id, hashed_password, name, phone, email))
 
             db.commit()
 
@@ -233,7 +312,7 @@ def check_userid():
             return jsonify({'error': 'userId가 없습니다.'}), 400
 
         with db.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) AS count FROM user WHERE UserID = %s", (user_id,))
+            cursor.execute("SELECT COUNT(*) AS count FROM `user` WHERE UserID = %s", (user_id,))
             result = cursor.fetchone()
 
         exists = result['count'] > 0
