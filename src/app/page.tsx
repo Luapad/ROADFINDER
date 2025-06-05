@@ -1,39 +1,67 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const router = useRouter();
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false); // 자동 로그인 상태 추가
+  const [checkedStorage, setCheckedStorage] = useState(false);
+
+  // 렌더링 먼저 허용
+  useLayoutEffect(() => {
+    setCheckedStorage(true);
+  }, []);
+
+  // confirm은 렌더 후 실행
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    const autoLogin = sessionStorage.getItem('autoLogin');
+
+    if (token && autoLogin != 'true' ){
+      requestAnimationFrame(() => {
+        const confirmed = window.confirm('이전에 로그인한 계정이 있습니다, 계속하시겠습니까?');
+        if (confirmed) {
+          sessionStorage.setItem('autoLogin', 'true');
+          router.push('/dashboard');
+        } else {
+          localStorage.clear();
+          sessionStorage.setItem('autoLogin', 'false'); // confirm 반복 방지
+        }
+      });
+    }
+  }, [router]);
 
   const handleLogin = async () => {
-  if (!id || !password) {
-    alert('아이디와 비밀번호를 입력하세요.');
-    return;
-  }
-
-  try {
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      credentials: 'include', // 쿠키 포함 필수
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: id, password, remember: rememberMe }),
-    });
-
-    if (res.ok) {
-      router.push('/dashboard');
-    } else {
-      const data = await res.json();
-      alert(data.message || '로그인에 실패했습니다.');
+    if (!id || !password) {
+      alert('아이디와 비밀번호를 입력하세요.');
+      return;
     }
-  } catch (error) {
-    alert('서버 오류가 발생했습니다.');
-  }
-};
 
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: id, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('userId', data.userId || id);
+        sessionStorage.setItem('autoLogin', 'true');
+        router.push('/dashboard');
+      } else {
+        alert(data.message || '로그인에 실패했습니다.');
+      }
+    } catch (error) {
+      alert('서버 오류가 발생했습니다.');
+    }
+  };
+
+  if (!checkedStorage) return null;
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50">
@@ -46,7 +74,7 @@ export default function Home() {
           src="/roadfinder.png"
           alt="로드파인더 아이콘"
           className="w-full h-auto object-contain rounded-4xl"
-        />        
+        />
 
         <input
           type="text"
@@ -64,32 +92,21 @@ export default function Home() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {/* 자동 로그인 + 회원가입 한 줄 배치 */}
-<div className="w-full flex justify-between items-center text-sm text-gray-700">
-  <label className="flex items-center space-x-1">
-    <input
-      type="checkbox"
-      checked={rememberMe}
-      onChange={(e) => setRememberMe(e.target.checked)}
-    />
-    <span>자동 로그인</span>
-  </label>
+        <div className="w-full flex justify-end text-sm text-gray-700">
+          <span
+            onClick={() => router.push('/sign-up')}
+            className="text-gray-600 hover:underline cursor-pointer"
+          >
+            회원가입
+          </span>
+        </div>
 
-  <span
-    onClick={() => router.push('/sign-up')}
-    className="text-gray-600 hover:underline cursor-pointer"
-  >
-    회원가입
-  </span>
-</div>
-
-<button
-  onClick={handleLogin}
-  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-base"
->
-  로그인
-</button>
-
+        <button
+          onClick={handleLogin}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-base"
+        >
+          로그인
+        </button>
 
         <button
           onClick={() => router.push('/map-nonmember')}

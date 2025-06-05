@@ -1,35 +1,25 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LogoutButton from '../../../components/LogoutButton';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    const tryAutoLogin = async () => {
-      const remember = localStorage.getItem('rememberMe');
-      if (remember !== 'true') {
-        // 자동 로그인 체크 안 했으면 로그인 페이지로 이동
-        router.push('/');
-        return;
-      }
+    const token = localStorage.getItem('accessToken');
+    const autoLogin = sessionStorage.getItem('autoLogin');
 
-      // 자동 로그인 체크한 경우만 리프레시 시도
-      const res = await fetch('/api/refresh', {
-        method: 'POST',
-        credentials: 'include',
-      });
+    if (!token || !autoLogin) {
+      router.push('/');
+    } else {
+      setChecked(true);
+    }
+  }, [router]);
 
-      if (!res.ok) {
-        // 리프레시 실패 → 로그인 페이지로 이동
-        router.push('/');
-      }
-    };
-
-    tryAutoLogin();
-  }, []);
+  if (!checked) return null;
 
   return (
     <div className="w-full min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 relative">
