@@ -1,13 +1,16 @@
 # app.py
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
+from flask_bcrypt import Bcrypt
 import math
+import jwt
 import json
 import pymysql
 from astar import astar, load_data
 
 app = Flask(__name__)
 CORS(app)
+bcrypt = Bcrypt(app)
 
 
 # DB 연결 설정
@@ -18,6 +21,309 @@ db = pymysql.connect(
     database='roadfinderdb',
     cursorclass=pymysql.cursors.DictCursor
 )
+
+SECRET_KEY = 'my-super-secret-key-123!'
+
+
+# 유효성 검사는 실제 토큰 구조나 시크릿 기반 검증 필요
+def validate_refresh_token(token):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        # 토큰이 만료되었으면 jwt.ExpiredSignatureError 발생
+        # 필요하면 payload 내 특정 값도 검사 가능
+        return True
+    except jwt.ExpiredSignatureError:
+        print("리프레시 토큰 만료")
+        return False
+    except jwt.InvalidTokenError:
+        print("리프레시 토큰 유효하지 않음")
+        return False
+
+def create_new_access_token(user_id, user_name):
+    now = datetime.datetime.utcnow()
+    payload = {
+        'UserID': user_id,
+        'UserName': user_name,
+        'exp': now + datetime.timedelta(hours=1)  # 1시간 유효
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
+@app.route('/api/refresh', methods=['POST'])
+def refresh():
+    refresh_token = request.cookies.get('refresh_token')
+
+    if not refresh_token or not validate_refresh_token(refresh_token):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=['HS256'])
+        user_id = payload['UserID']
+        user_name = payload['UserName']
+
+    except Exception as e:
+        return jsonify({'error': 'Invalid token'}), 401
+
+    new_access_token = create_new_access_token()
+
+    resp = make_response(jsonify({'message': '새 액세스 토큰 발급'}))
+    resp.set_cookie(
+        'access_token',
+        new_access_token,
+        httponly=True,
+        secure=True,
+        samesite='Strict',
+        max_age=3600  # 1시간
+    )
+    return resp
+
+
+
+@app.route('/api/map-timetable', methods=['POST'])
+def map_timetable():
+    data = request.get_json()
+    user_id = data.get('userId')
+
+    print(' 요청 받은 userId:', user_id)
+
+    if not user_id:
+        return jsonify({'error': 'userId 누락'}), 400
+
+    try:
+        with db.cursor() as cursor:
+            # 1. 시간표에서 건물 이름 추출
+            cursor.execute("""
+                SELECT DISTINCT BuildingName
+                FROM timetable
+                WHERE UserID = %s
+            """, (user_id,))
+            building_names = [row['BuildingName'] for row in cursor.fetchall()]
+            print(' 추출된 건물:', building_names)
+
+            if not building_names:
+                return jsonify({'buildings': []})
+
+            # 2. 좌표 조회
+            placeholders = ','.join(['%s'] * len(building_names))
+            sql = f"""
+                SELECT BuildingName, Latitude AS lat, Longitude AS lon
+                FROM buildings
+                WHERE BuildingName IN ({placeholders})
+            """
+            print(' 쿼리:', sql)
+            print(' 파라미터:', building_names)
+
+            cursor.execute(sql, building_names)
+            rows = cursor.fetchall()
+
+            # 3. name 필드로 포맷 변환
+            formatted = [
+                {'name': row['BuildingName'], 'lat': row['lat'], 'lon': row['lon']}
+                for row in rows
+            ]
+
+            print(' 응답:', formatted)
+            return jsonify({'buildings': formatted})
+
+    except Exception as e:
+        print(' 오류 발생:', e)
+        return jsonify({'error': '서버 오류'}), 500
+
+
+
+@app.route('/api/timetable', methods=['POST'])
+def save_timetable():
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+        entries_by_day = data.get('entries')  # 리스트 형태로 예상
+
+        if not user_id or entries_by_day is None:
+            return jsonify({'error': 'userId 또는 entries 누락'}), 400
+
+        with db.cursor() as cursor:
+            # 기존 시간표 삭제 (덮어쓰기 방식)
+            cursor.execute("DELETE FROM timetable WHERE UserID = %s", (user_id,))
+
+            # 새로 insert
+            for day, entries in entries_by_day.items():
+                for entry in entries: 
+                    cursor.execute("""
+                        INSERT INTO timetable (UserID, LectureName, BuildingName, day, start_time, end_time)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (
+                        user_id,
+                        entry.get('subject'),
+                        entry.get('building'),
+                        day,
+                        entry.get('start'),
+                        entry.get('end')
+                    ))
+
+            db.commit()
+
+        return jsonify({'message': '저장 성공'}), 200
+
+    except Exception as e:
+        print("시간표 저장 중 에러:", e, flush=True)
+        return jsonify({'error': '저장 실패'}), 500
+
+
+@app.route('/api/timetable', methods=['GET'])
+def load_timetable():
+    try:
+        user_id = request.args.get('userId')
+
+        if not user_id:
+            return jsonify({'error': 'userId 누락'}), 400
+
+        with db.cursor() as cursor:
+            cursor.execute("SELECT LectureName, BuildingName, day, start_time, end_time FROM timetable WHERE UserID = %s", (user_id,))
+            results = cursor.fetchall()
+
+        # 프론트 요구 형식에 맞게 변환
+        entries = {}
+        for row in results:
+            day = row['day']
+            entry = {
+                'start': str(row['start_time']),
+                'end': str(row['end_time']),
+                'subject': row['LectureName'],
+                'building': row['BuildingName']
+            }
+            if day not in entries:
+                entries[day] = []
+            entries[day].append(entry)
+
+        return jsonify({'entries': entries}), 200
+
+    except Exception as e:
+        print("시간표 불러오기 중 에러:", e, flush=True)
+        return jsonify({'error': '불러오기 실패'}), 500
+
+
+
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+        password = data.get('password')
+        remember = data.get('remember', False)
+
+        if not user_id or not password:
+            return jsonify({'message': '아이디와 비밀번호를 입력해주세요.'}), 400
+
+        with db.cursor() as cursor:
+            cursor.execute("SELECT * FROM `user` WHERE UserID = %s", (user_id,))
+            user = cursor.fetchone()
+
+        if not user or not check_password_hash(user['Password'], password):
+            return jsonify({'message': '아이디 또는 비밀번호가 일치하지 않습니다.'}), 401
+
+        now = datetime.datetime.utcnow()
+
+        # Access Token: 1시간 유효
+        access_payload = {
+            'UserID': user['UserID'],
+            'UserName': user['UserName'],
+            'exp': now + datetime.timedelta(hours=1)
+        }
+        access_token = jwt.encode(access_payload, SECRET_KEY, algorithm='HS256')
+
+        resp = make_response(jsonify({'message': '로그인 성공'}))
+        resp.set_cookie(
+            'access_token',
+            access_token,
+            httponly=True,
+            secure=True,
+            samesite='Strict',
+            max_age=3600  # 1시간
+        )
+
+        if remember:
+            # Refresh Token: 30일 유효
+            refresh_payload = {
+                'UserID': user['UserID'],
+                'UserName': user['UserName'],
+                'exp': now + datetime.timedelta(days=30)
+            }
+            refresh_token = jwt.encode(refresh_payload, SECRET_KEY, algorithm='HS256')
+            resp.set_cookie(
+                'refresh_token',
+                refresh_token,
+                httponly=True,
+                secure=True,
+                samesite='Strict',
+                max_age=60 * 60 * 24 * 30  # 30일
+            )
+
+        return resp
+
+    except Exception as e:
+        print("로그인 중 에러:", e, flush=True)
+        return jsonify({'message': '서버 오류가 발생했습니다.'}), 500
+
+
+@app.route('/api/sign-up', methods=['POST'])
+def sign_up():
+    try:
+        data = request.get_json()
+
+        user_id = data.get('userId')
+        password = data.get('password')
+        name = data.get('name')
+        phone = data.get('phone')
+        email = data.get('email')
+
+        # 입력값 유효성 확인
+        if not all([user_id, password, name, phone, email]):
+            return jsonify({'error': '모든 필드를 입력해야 합니다.'}), 400
+
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        with db.cursor() as cursor:
+
+            # 새 사용자 INSERT
+            cursor.execute("""
+                INSERT INTO `user`  (UserID, Password, UserName, PhoneNumber, email)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (user_id, hashed_password, name, phone, email))
+
+            db.commit()
+
+        return jsonify({'message': '회원가입 완료'}), 201
+
+    except Exception as e:
+        print("회원가입 중 에러:", e, flush=True)
+        return jsonify({'error': '서버 오류가 발생했습니다.'}), 500
+
+
+
+
+
+@app.route('/api/check-userid', methods=['POST'])
+def check_userid():
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+
+        if not user_id:
+            return jsonify({'error': 'userId가 없습니다.'}), 400
+
+        with db.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) AS count FROM `user` WHERE UserID = %s", (user_id,))
+            result = cursor.fetchone()
+
+        exists = result['count'] > 0
+        return jsonify({'exists': exists})
+
+    except Exception as e:
+        print("아이디 중복 확인 중 에러:", e, flush=True)
+        return jsonify({'error': '서버 오류가 발생했습니다.'}), 500
+
+
+
 
 @app.route('/api/buildings/by-category', methods=['POST'])
 def get_buildings_by_category():
