@@ -24,7 +24,7 @@ useEffect(() => {
     return;
   }
 
-  if (token && autoLogin !== 'true') {
+  if (token && autoLogin === null) {
     setTimeout(() => {
       const confirmed = window.confirm('이전에 로그인한 계정이 있습니다, 계속하시겠습니까?');
       if (confirmed) {
