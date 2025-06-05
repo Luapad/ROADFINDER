@@ -10,34 +10,30 @@ export default function Home() {
   const [rememberMe, setRememberMe] = useState(false); // 자동 로그인 상태 추가
 
   const handleLogin = async () => {
-    if (!id || !password) {
-      alert('아이디와 비밀번호를 입력하세요.');
-      return;
-    }
+  if (!id || !password) {
+    alert('아이디와 비밀번호를 입력하세요.');
+    return;
+  }
 
-    try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        credentials: 'include', // 쿠키 포함
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: id, password, remember: rememberMe }),
-      });
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      credentials: 'include', // 쿠키 포함 필수
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: id, password, remember: rememberMe }),
+    });
 
+    if (res.ok) {
+      router.push('/dashboard');
+    } else {
       const data = await res.json();
-
-      if (res.ok && data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userId', id);
-        localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false'); 
-
-        router.push('/dashboard');
-      } else {
-        alert(data.message || '로그인에 실패했습니다.');
-      }
-    } catch (error) {
-      alert('서버 오류가 발생했습니다.');
+      alert(data.message || '로그인에 실패했습니다.');
     }
-  };
+  } catch (error) {
+    alert('서버 오류가 발생했습니다.');
+  }
+};
+
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50">
