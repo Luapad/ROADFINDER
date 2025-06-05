@@ -7,6 +7,7 @@ export default function Home() {
   const router = useRouter();
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false); // 자동 로그인 상태 추가
 
   const handleLogin = async () => {
     if (!id || !password) {
@@ -17,8 +18,9 @@ export default function Home() {
     try {
       const res = await fetch('/api/login', {
         method: 'POST',
+        credentials: 'include', // 쿠키 포함
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: id, password }),
+        body: JSON.stringify({ userId: id, password, remember: rememberMe }),
       });
 
       const data = await res.json();
@@ -26,6 +28,7 @@ export default function Home() {
       if (res.ok && data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userId', id);
+        localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false'); 
 
         router.push('/dashboard');
       } else {
@@ -35,7 +38,6 @@ export default function Home() {
       alert('서버 오류가 발생했습니다.');
     }
   };
-
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50">
@@ -66,21 +68,32 @@ export default function Home() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button
-          onClick={handleLogin}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-base mb-0"
-        >
-          로그인
-        </button>
+        {/* 자동 로그인 + 회원가입 한 줄 배치 */}
+<div className="w-full flex justify-between items-center text-sm text-gray-700">
+  <label className="flex items-center space-x-1">
+    <input
+      type="checkbox"
+      checked={rememberMe}
+      onChange={(e) => setRememberMe(e.target.checked)}
+    />
+    <span>자동 로그인</span>
+  </label>
 
-        <div className="w-full flex justify-end -mt-3.5">
-          <span
-            onClick={() => router.push('/sign-up')}
-            className="text-sm text-gray-600 hover:underline cursor-pointer"
-          >
-          회원가입
-          </span>
-        </div>
+  <span
+    onClick={() => router.push('/sign-up')}
+    className="text-gray-600 hover:underline cursor-pointer"
+  >
+    회원가입
+  </span>
+</div>
+
+<button
+  onClick={handleLogin}
+  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-base"
+>
+  로그인
+</button>
+
 
         <button
           onClick={() => router.push('/map-nonmember')}
@@ -91,4 +104,4 @@ export default function Home() {
       </div>
     </main>
   );
-} 
+}

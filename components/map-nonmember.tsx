@@ -152,6 +152,8 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
       }
       const routeLayer = L.geoJSON(geojson).addTo(map);
       routeLayerRef.current = routeLayer;
+      map.setView([startInfo.lat, startInfo.lon], 17);
+      setShowSearch(false);
     } catch {
       alert('서버 오류');
     }
@@ -326,6 +328,7 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
               className="w-full bg-blue-600 text-white py-1 rounded-md mt-1"
             >
               경로 찾기
+
             </button>
           </div>
         )}

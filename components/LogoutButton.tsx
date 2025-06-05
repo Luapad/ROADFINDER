@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { logoutUser } from '@/utils/logout'; // 경로는 실제 위치에 맞게 조정
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -24,9 +25,9 @@ export default function LogoutButton() {
     };
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.href = '/';
+  const handleLogout = async () => {
+    await logoutUser(); // 쿠키 + localStorage 삭제
+    router.push('/');
   };
 
   if (loggedIn !== true) return null;

@@ -152,6 +152,8 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
       }
       const routeLayer = L.geoJSON(geojson).addTo(map);
       routeLayerRef.current = routeLayer;
+      map.setView([startInfo.lat, startInfo.lon], 17);
+      setShowSearch(false);
     } catch {
       alert('서버 오류');
     }

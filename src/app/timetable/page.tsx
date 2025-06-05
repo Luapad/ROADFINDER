@@ -56,6 +56,9 @@ export default function TimetablePage() {
   const [selectedPeriods, setSelectedPeriods] = useState<Record<Weekday, number[]>>({
     월: [], 화: [], 수: [], 목: [], 금: [],
   });
+
+;
+
   const [entries, setEntries] = useState(initialEntries);
 
   const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
