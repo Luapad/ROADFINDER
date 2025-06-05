@@ -9,35 +9,31 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [checkedStorage, setCheckedStorage] = useState(false);
 
-  // 렌더링 먼저 허용
-  useLayoutEffect(() => {
-    setCheckedStorage(true);
-  }, []);
+useEffect(() => {
+  const token = localStorage.getItem('accessToken');
+  const autoLogin = sessionStorage.getItem('autoLogin');
 
-  // confirm은 렌더 후 실행
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    const autoLogin = sessionStorage.getItem('autoLogin');
+  setCheckedStorage(true); // ✅ 렌더링 먼저 허용
 
-      if (token && autoLogin === 'true') {
-    // ✅ 이미 자동 로그인 완료된 경우 → 대시보드로 바로 이동
+  if (token && autoLogin === 'true') {
     router.push('/dashboard');
     return;
   }
 
-    if (token && autoLogin != 'true' ){
-      requestAnimationFrame(() => {
-        const confirmed = window.confirm('이전에 로그인한 계정이 있습니다, 계속하시겠습니까?');
-        if (confirmed) {
-          sessionStorage.setItem('autoLogin', 'true');
-          router.push('/dashboard');
-        } else {
-          localStorage.clear();
-          sessionStorage.setItem('autoLogin', 'false'); // confirm 반복 방지
-        }
-      });
-    }
-  }, [router]);
+  if (token && autoLogin !== 'true') {
+    requestAnimationFrame(() => {
+      const confirmed = window.confirm('이전에 로그인한 계정이 있습니다, 계속하시겠습니까?');
+      if (confirmed) {
+        sessionStorage.setItem('autoLogin', 'true');
+        router.push('/dashboard');
+      } else {
+        localStorage.clear();
+        sessionStorage.setItem('autoLogin', 'false');
+      }
+    });
+  }
+}, [router]);
+
 
   const handleLogin = async () => {
     if (!id || !password) {
