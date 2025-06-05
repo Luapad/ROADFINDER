@@ -9,11 +9,15 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [checkedStorage, setCheckedStorage] = useState(false);
 
+useLayoutEffect(() => {
+  setCheckedStorage(true); // ✅ 먼저 렌더링 허용
+}, []);
+
 useEffect(() => {
+  if (!checkedStorage) return; // ✅ 렌더링 안 됐으면 confirm도 막음
+
   const token = localStorage.getItem('accessToken');
   const autoLogin = sessionStorage.getItem('autoLogin');
-
-  setCheckedStorage(true); // ✅ 렌더링 먼저 허용
 
   if (token && autoLogin === 'true') {
     router.push('/dashboard');
@@ -21,7 +25,7 @@ useEffect(() => {
   }
 
   if (token && autoLogin !== 'true') {
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       const confirmed = window.confirm('이전에 로그인한 계정이 있습니다, 계속하시겠습니까?');
       if (confirmed) {
         sessionStorage.setItem('autoLogin', 'true');
@@ -30,10 +34,11 @@ useEffect(() => {
         localStorage.clear();
         sessionStorage.setItem('autoLogin', 'false');
       }
-    });
+    }, 0);
   }
-}, [router]);
+}, [checkedStorage, router]);
 
+ 
 
   const handleLogin = async () => {
     if (!id || !password) {
