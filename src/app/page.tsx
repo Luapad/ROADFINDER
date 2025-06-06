@@ -7,14 +7,8 @@ export default function Home() {
   const router = useRouter();
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
-  const [checkedStorage, setCheckedStorage] = useState(false);
-
-useLayoutEffect(() => {
-  setCheckedStorage(true); // ✅ 먼저 렌더링 허용
-}, []);
 
 useEffect(() => {
-  if (!checkedStorage) return; // ✅ 렌더링 안 됐으면 confirm도 막음
 
   const token = localStorage.getItem('accessToken');
   const autoLogin = sessionStorage.getItem('autoLogin');
@@ -24,7 +18,7 @@ useEffect(() => {
     return;
   }
 
-  if (token && autoLogin === null) {
+  if (token && autoLogin != 'true') {
     setTimeout(() => {
       const confirmed = window.confirm('이전에 로그인한 계정이 있습니다, 계속하시겠습니까?');
       if (confirmed) {
@@ -36,7 +30,7 @@ useEffect(() => {
       }
     }, 0);
   }
-}, [checkedStorage, router]);
+}, [router]);
 
  
 
@@ -68,7 +62,7 @@ useEffect(() => {
     }
   };
 
-  if (!checkedStorage) return null;
+ 
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50">

@@ -41,6 +41,10 @@ const initialEntries: Record<Weekday, PeriodData[]> = {
   월: [], 화: [], 수: [], 목: [], 금: [],
 };
 
+const initialPeriods: Record<Weekday, number[]> = {
+  월: [], 화: [], 수: [], 목: [], 금: [],
+};
+
 const timeToMinutes = (time: string) => {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
@@ -53,36 +57,38 @@ export default function TimetablePage() {
   const [buildingOptions, setBuildingOptions] = useState<string[]>([]);
   const [building, setBuilding] = useState('');
   const [selectedDays, setSelectedDays] = useState<Weekday[]>([]);
-  const [selectedPeriods, setSelectedPeriods] = useState<Record<Weekday, number[]>>({
-    월: [], 화: [], 수: [], 목: [], 금: [],
-  });
-
-;
-
+  const [selectedPeriods, setSelectedPeriods] = useState(initialPeriods);
   const [entries, setEntries] = useState(initialEntries);
+  const [subjectColors, setSubjectColors] = useState<Record<string, string>>({});
 
   const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
 
-useEffect(() => {
-  fetch(`/api/timetable?userId=${userId}`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.entries) {
-        const filledEntries: typeof entries = { 월: [], 화: [], 수: [], 목: [], 금: [] };
+  useEffect(() => {
+    fetch(`/api/timetable?userId=${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.entries) {
+          const filledEntries: typeof entries = { 월: [], 화: [], 수: [], 목: [], 금: [] };
+          const colors: Record<string, string> = {};
 
-        (Object.entries(data.entries) as [Weekday, PeriodData[]][]).forEach(([day, list]) => {
-          filledEntries[day] = list.map(entry => ({
-            ...entry,
-            color: entry.color || `hsl(${Math.floor(Math.random() * 360)}, 80%, 85%)`,
-          }));
-        });
+          (Object.entries(data.entries) as [Weekday, PeriodData[]][]).forEach(([day, list]) => {
+            filledEntries[day] = list.map(entry => {
+              if (!colors[entry.subject]) {
+                colors[entry.subject] = entry.color || `hsl(${Math.floor(Math.random() * 360)}, 80%, 85%)`;
+              }
+              return {
+                ...entry,
+                color: colors[entry.subject],
+              };
+            });
+          });
 
-        setEntries(filledEntries);
-      }
-    })
-    .catch(() => setEntries(initialEntries));
-}, []);
-
+          setEntries(filledEntries);
+          setSubjectColors(colors);
+        }
+      })
+      .catch(() => setEntries(initialEntries));
+  }, []);
 
   useEffect(() => {
     if (!selectedCategory) return;
@@ -115,7 +121,11 @@ useEffect(() => {
   const handleAdd = () => {
     if (!subject || !building || selectedDays.length === 0) return;
 
-    const color = `hsl(${Math.floor(Math.random() * 360)}, 80%, 85%)`;
+    const newColor = subjectColors[subject] || `hsl(${Math.floor(Math.random() * 360)}, 80%, 85%)`;
+    if (!subjectColors[subject]) {
+      setSubjectColors(prev => ({ ...prev, [subject]: newColor }));
+    }
+
     const newEntries = { ...entries };
 
     selectedDays.forEach(day => {
@@ -127,7 +137,7 @@ useEffect(() => {
       const end = timetable[day][sorted[sorted.length - 1]].end;
 
       if (!newEntries[day]) newEntries[day] = [];
-      newEntries[day].push({ subject, building, start, end, color });
+      newEntries[day].push({ subject, building, start, end, color: newColor });
     });
 
     setEntries(newEntries);
@@ -135,17 +145,11 @@ useEffect(() => {
     setBuilding('');
     setSelectedCategory('');
     setSelectedDays([]);
-    setSelectedPeriods({ 월: [], 화: [], 수: [], 목: [], 금: [] });
+    setSelectedPeriods(initialPeriods);
     setBuildingOptions([]);
   };
 
   const handleSave = async () => {
-
-    console.log('userId:', userId);
-
-  // entries 구조 확인
-  console.log('entries:', JSON.stringify(entries, null, 2));
-
     await fetch('/api/timetable', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -165,14 +169,12 @@ useEffect(() => {
     <main className="p-4 w-full max-w-md mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-gray-900">시간표 입력</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-md font-medium"
-          >
-            홈
-          </button>
-        </div>
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-md font-medium"
+        >
+          홈
+        </button>
       </div>
 
       <input
@@ -190,7 +192,7 @@ useEffect(() => {
         <select
           value={building}
           onChange={e => setBuilding(e.target.value)}
-          className="w-full border rounded-md p-2 mb-4 text-gray-900 placeholder-gray-600 bg-white"
+          className="w-full border rounded-md p-2 mb-4 text-gray-900 bg-white"
         >
           <option value="">선택하세요</option>
           {buildingOptions.map(b => (
@@ -250,20 +252,27 @@ useEffect(() => {
         시간표 저장
       </button>
 
+      {Object.values(entries).some(dayList => dayList.length > 0) && (
+        <p className="text-red-600 text-sm font-medium mb-4 text-center">
+          ※시간표 변경 후 꼭 저장해주세요.※
+        </p>
+      )}
+
       <div className="w-full">
-        <table className="table-fixed border-collapse w-full text-gray-800 text-xs">
+        <table className="border-collapse w-full text-gray-800 text-[10px]">
           <thead>
             <tr>
-              <th className="border bg-gray-100 w-[40px]"></th>
+              <th className="border bg-gray-100 w-1/12"></th>
               {weekdays.map(day => (
-                <th key={day} className="border bg-gray-800 text-white w-[65px]">{day}</th>
+                <th key={day} className="border bg-gray-800 text-white w-2/12">{day}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {timeSlots.map((slot) => {
+            {timeSlots.map(slot => {
               const hour = slot.split(':')[0];
               const minute = slot.split(':')[1];
+
               return (
                 <tr key={slot}>
                   <td className="border relative align-top h-8">
@@ -274,16 +283,19 @@ useEffect(() => {
                   {weekdays.map(day => {
                     const dayEntries = entries[day] ?? [];
                     const entry = dayEntries.find(e => timeToMinutes(e.start) === timeToMinutes(slot));
+
                     if (entry) {
                       const span = (timeToMinutes(entry.end) - timeToMinutes(entry.start)) / 30;
 
                       const handleDelete = () => {
-                        const confirmDelete = window.confirm('삭제하시겠습니까?');
+                        const confirmDelete = window.confirm(`${entry.subject} 강의의을 삭제하시겠습니까?\n시간표 변경 후 꼭 저장해주세요!`);
                         if (!confirmDelete) return;
 
                         setEntries(prev => {
                           const updated = { ...prev };
-                          updated[day] = updated[day].filter(e => e !== entry);
+                          (Object.keys(prev) as Weekday[]).forEach(d => {
+                            updated[d] = updated[d].filter(e => e.subject !== entry.subject);
+                          });
                           return updated;
                         });
                       };
@@ -309,6 +321,7 @@ useEffect(() => {
                       timeToMinutes(e.start) < timeToMinutes(slot) &&
                       timeToMinutes(e.end) > timeToMinutes(slot)
                     );
+
                     return isCovered ? null : (
                       <td key={day + slot} className="border h-8"></td>
                     );
