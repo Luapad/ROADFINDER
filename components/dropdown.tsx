@@ -24,7 +24,7 @@ const CATEGORIES = [
 export default function CategoryDropdown({ value, onChange }: Props) {
   return (
     <div className="mb-2">
-      <label className="block text-sm font-medium text-gray-700 mb-1">건물명1</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1"></label>
       <select
         value={value}
         onChange={e => onChange(e.target.value)}

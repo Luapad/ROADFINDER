@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = 'http://34.47.125.86:8080/api/timetable'; // 실제 백엔드 주소로 교체
-
+const BACKEND_URL = 'http://34.47.125.86:8080/api/timetable'; 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get('userId');
@@ -21,7 +20,6 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  console.log('▶ 백엔드로 보낼 body:', JSON.stringify(body, null, 2)); 
   try {
     const res = await fetch(BACKEND_URL, {
       method: 'POST',

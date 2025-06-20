@@ -25,7 +25,7 @@ export default function LogoutButton() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.clear();         // 전부 삭제
+    localStorage.clear();         
     sessionStorage.clear();    
     router.push('/');
   };

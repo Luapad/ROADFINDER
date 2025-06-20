@@ -32,8 +32,6 @@ useEffect(() => {
   }
 }, [router]);
 
- 
-
   const handleLogin = async () => {
     if (!id || !password) {
       alert('아이디와 비밀번호를 입력하세요.');
@@ -61,8 +59,6 @@ useEffect(() => {
       alert('서버 오류가 발생했습니다.');
     }
   };
-
- 
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50">

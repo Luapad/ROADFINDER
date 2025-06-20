@@ -258,13 +258,13 @@ export default function TimetablePage() {
         </p>
       )}
 
-      <div className="w-full">
+      <div className="w-full overflow-hidden ml-[-4.165%]">
         <table className="border-collapse w-full text-gray-800 text-[10px]">
           <thead>
             <tr>
-              <th className="border bg-gray-100 w-1/12"></th>
+              <th className="w-1/12 bg-white p-0 m-0 border-none invisible"></th>
               {weekdays.map(day => (
-                <th key={day} className="border bg-gray-800 text-white w-2/12">{day}</th>
+                <th key={day} className="bg-gray-800 text-white w-2/12">{day}</th>
               ))}
             </tr>
           </thead>
@@ -275,7 +275,7 @@ export default function TimetablePage() {
 
               return (
                 <tr key={slot}>
-                  <td className="border relative align-top h-8">
+                  <td className="relative align-top h-8">
                     {minute === '00' && (
                       <span className="absolute top-1 right-1 text-[10px] text-gray-600">{hour}</span>
                     )}
@@ -288,7 +288,7 @@ export default function TimetablePage() {
                       const span = (timeToMinutes(entry.end) - timeToMinutes(entry.start)) / 30;
 
                       const handleDelete = () => {
-                        const confirmDelete = window.confirm(`${entry.subject} 강의의을 삭제하시겠습니까?\n시간표 변경 후 꼭 저장해주세요!`);
+                        const confirmDelete = window.confirm(`${entry.subject} 강의을 삭제하시겠습니까?\n시간표 변경 후 꼭 저장해주세요!`);
                         if (!confirmDelete) return;
 
                         setEntries(prev => {

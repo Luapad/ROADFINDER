@@ -112,52 +112,68 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
   };
 
   const runSearch = async () => {
-    if (!startBuilding || !endBuilding) return;
-    const map = mapRef.current;
-    if (!map) return;
+  if (!startBuilding || !endBuilding) return;
+  const map = mapRef.current;
+  if (!map) return;
 
-    if (routeLayerRef.current) {
-      map.removeLayer(routeLayerRef.current);
-      routeLayerRef.current = null;
-    }
+  // 기존 경로 제거
+  if (routeLayerRef.current) {
+    map.removeLayer(routeLayerRef.current);
+    routeLayerRef.current = null;
+  }
 
-    const startInfo = await fetchBuildingCoords(startBuilding);
-    const endInfo = await fetchBuildingCoords(endBuilding);
+  // 기존 마커 제거
+  markers.forEach(m => m.remove());
+  setMarkers([]);
 
-    console.log('startInfo:', startInfo);
-    console.log('endInfo:', endInfo);
+  const startInfo = await fetchBuildingCoords(startBuilding);
+  const endInfo = await fetchBuildingCoords(endBuilding);
 
-    if (!startInfo || !endInfo) {
-      alert('건물 정보를 불러올 수 없습니다.');
+  if (!startInfo || !endInfo) {
+    alert('건물 정보를 불러올 수 없습니다.');
+    return;
+  }
+
+  const startLatLng: LatLngExpression = [startInfo.lat, startInfo.lon];
+  const endLatLng: LatLngExpression = [endInfo.lat, endInfo.lon];
+
+  const startMarker = L.marker(startLatLng, { icon: routeMarkerIcon });
+  const endMarker = L.marker(endLatLng, { icon: routeMarkerIcon });
+
+  startMarker.addTo(map);
+  endMarker.addTo(map);
+  setMarkers([startMarker, endMarker]);
+
+  map.setView(startLatLng, 17);
+
+  const startId = await getNearestNodeId(startInfo.lat, startInfo.lon);
+  const endId = await getNearestNodeId(endInfo.lat, endInfo.lon);
+  if (!startId || !endId) {
+    alert('노드를 찾을 수 없습니다.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/route', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start: startId, goal: endId }),
+    });
+
+    const geojson = await res.json();
+    if (!geojson || geojson.type !== 'FeatureCollection') {
+      alert('경로를 찾을 수 없습니다.');
       return;
     }
 
-    const startId = await getNearestNodeId(startInfo.lat, startInfo.lon);
-    const endId = await getNearestNodeId(endInfo.lat, endInfo.lon);
-    if (!startId || !endId) {
-      alert('노드를 찾을 수 없습니다.');
-      return;
-    }
+    const routeLayer = L.geoJSON(geojson).addTo(map);
+    routeLayerRef.current = routeLayer;
+    setShowSearch(false);
+  } catch {
+    alert('서버 오류');
+  }
+};
 
-    try {
-      const res = await fetch('/api/route', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ start: startId, goal: endId }),
-      });
-      const geojson = await res.json();
-      if (!geojson || geojson.type !== 'FeatureCollection') {
-        alert('경로를 찾을 수 없습니다.');
-        return;
-      }
-      const routeLayer = L.geoJSON(geojson).addTo(map);
-      routeLayerRef.current = routeLayer;
-      map.setView([startInfo.lat, startInfo.lon], 17);
-      setShowSearch(false);
-    } catch {
-      alert('서버 오류');
-    }
-  };
 
   useEffect(() => {
     const map = mapRef.current;

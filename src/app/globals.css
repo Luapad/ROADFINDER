@@ -49,3 +49,27 @@ body {
   transform: scale(var(--scale, 1));
   transition: transform 0.1s ease-out;
 }
+
+.timetable-marker-inner {
+  width: 48px;
+  height: 96px;
+  background-image: url('/marker_classroom.png'); 
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  transform-origin: bottom center;
+  transform: scale(var(--scale, 1));
+  transition: transform 0.1s ease-out;
+}
+
+.timetable-marker-selected {
+  width: 48px;
+  height: 96px;
+  background-image: url('/marker_classroom_selected.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  transform-origin: bottom center;
+  transform: scale(var(--scale, 1));
+  transition: transform 0.1s ease-out;
+}

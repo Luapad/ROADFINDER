@@ -30,7 +30,7 @@ export default function SignUpPage() {
       .then(data => {
         if (data.exists) {
           setIsIdChecked(false);
-          setIdCheckMessage('이미 사용 중인 아이디입니다.');
+          setIdCheckMessage('사용 중인 아이디입니다.');
         } else {
           setIsIdChecked(true);
           setIdCheckMessage('사용 가능한 아이디입니다.');
@@ -112,7 +112,7 @@ export default function SignUpPage() {
         />
         <input
           type="text"
-          placeholder="전화번호 : 010-xxxx-xxxx"
+          placeholder="전화번호 : 숫자만 입력하세요."
           value={phone}
           onChange={e => setPhone(e.target.value)}
           className="w-full bg-white border border-gray-400 rounded-xl px-4 py-3 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"

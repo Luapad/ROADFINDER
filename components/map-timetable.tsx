@@ -4,41 +4,28 @@ import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import { useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import type { LatLng, LatLngExpression, LeafletMouseEvent, GeoJSON, Map as LeafletMap } from 'leaflet';
+import type { LatLng, GeoJSON, Map as LeafletMap } from 'leaflet';
 
-import 'leaflet/dist/leaflet.css';
+type Button = { label: string; path: string };
+type BuildingMarker = { name: string; lat: number; lon: number };
 
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+const createResponsiveIcon = (className: string, size: [number, number], anchor: [number, number]) =>
+  L.divIcon({
+    html: `<div class="${className}"></div>`,
+    className: '',
+    iconSize: size,
+    iconAnchor: anchor,
+  });
 
-(delete (L.Icon.Default.prototype as any)._getIconUrl);
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x.src,
-  iconUrl: markerIcon.src,
-  shadowUrl: markerShadow.src,
-});
+const routeMarkerIcon = createResponsiveIcon('route-marker-inner', [50, 50], [25, 50]);
 
-
-type BuildingMarker = {
-  name: string;
-  lat: number;
-  lon: number;
-};
-
-const routeMarkerIcon = L.divIcon({
-  html: `<div class="route-marker-inner"></div>`,
-  className: '',
-  iconSize: [50, 50],
-  iconAnchor: [25, 50],
-});
-
-export default function MapTimetable() {
+export default function MapTimetable({ buttons = [] }: { buttons?: Button[] }) {
   const mapRef = useRef<LeafletMap | null>(null);
-  const [markers, setMarkers] = useState<L.Marker[]>([]);
   const [selectedPoints, setSelectedPoints] = useState<LatLng[]>([]);
-  const routeLayerRef = useRef<GeoJSON | null>(null);
   const [buildingMarkers, setBuildingMarkers] = useState<BuildingMarker[]>([]);
+  const [selectedBuildingName, setSelectedBuildingName] = useState<string | null>(null);
+  const routeLayerRef = useRef<GeoJSON | null>(null);
+  const [isButtonClick, setIsButtonClick] = useState(false);
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -52,7 +39,8 @@ export default function MapTimetable() {
       .then(res => res.json())
       .then(data => {
         console.log('API 응답:', data);
-        setBuildingMarkers(data.buildings || []);})
+        setBuildingMarkers(data.buildings || []);
+      })
       .catch(err => {
         console.error('건물 마커 불러오기 실패:', err);
       });
@@ -73,13 +61,14 @@ export default function MapTimetable() {
     }
   };
 
-  const handleMarkerClick = async (lat: number, lon: number) => {
+  const handleMarkerClick = async (lat: number, lon: number, name: string) => {
+    if (isButtonClick) return;
     const map = mapRef.current;
     if (!map) return;
 
+    setSelectedBuildingName(name);
+
     if (selectedPoints.length >= 2) {
-      markers.forEach(m => m.remove());
-      setMarkers([]);
       setSelectedPoints([]);
       if (routeLayerRef.current) {
         map.removeLayer(routeLayerRef.current);
@@ -88,8 +77,6 @@ export default function MapTimetable() {
     }
 
     const point = L.latLng(lat, lon);
-    const marker = L.marker(point, { icon: routeMarkerIcon }).addTo(map);
-    setMarkers(prev => [...prev, marker]);
     setSelectedPoints(prev => [...prev, point]);
 
     if (selectedPoints.length === 1) {
@@ -118,11 +105,37 @@ export default function MapTimetable() {
 
         const routeLayer = L.geoJSON(geojson).addTo(map);
         routeLayerRef.current = routeLayer;
+
+        map.setView(start, map.getZoom());
+        
       } catch (err) {
         console.error('경로 요청 실패:', err);
       }
     }
   };
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const onZoom = () => {
+      const zoom = map.getZoom();
+      const scale = zoom / 16;
+      const elements = document.querySelectorAll(
+        '.timetable-marker-inner, .timetable-marker-selected, .route-marker-inner'
+      );
+      elements.forEach((el) => {
+        (el as HTMLElement).style.setProperty('--scale', `${scale}`);
+      });
+    };
+
+    map.on('zoomend', onZoom);
+    onZoom();
+
+    return () => {
+      map.off('zoomend', onZoom);
+    };
+  }, []);
 
   function MapInit({ onReady }: { onReady: (map: LeafletMap) => void }) {
     const map = useMap();
@@ -134,24 +147,46 @@ export default function MapTimetable() {
 
   return (
     <div className="relative w-full h-screen">
+      {buttons.length > 0 && (
+        <div className="absolute top-4 right-4 z-[1000] space-x-2">
+          {buttons.map((btn, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                setIsButtonClick(true);
+                window.location.href = btn.path;
+                setTimeout(() => setIsButtonClick(false), 300);
+              }}
+              className="bg-white px-3 py-1 rounded shadow text-sm font-medium text-gray-800"
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <MapContainer center={[35.1744, 126.9094]} zoom={16} className="w-full h-full z-0">
         <MapInit onReady={(map) => (mapRef.current = map)} />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="© OpenStreetMap contributors"
         />
-       {buildingMarkers
-  .filter(b => typeof b.lat === 'number' && typeof b.lon === 'number')
-  .map((b, idx) => (
-    <Marker
-      key={`${b.name}-${idx}`}
-      position={[b.lat, b.lon]}
-      eventHandlers={{
-        click: () => handleMarkerClick(b.lat, b.lon),
-      }}
-    />
-))}
-
+        {buildingMarkers
+          .filter(b => typeof b.lat === 'number' && typeof b.lon === 'number')
+          .map((b, idx) => (
+            <Marker
+              key={`${b.name}-${idx}`}
+              position={[b.lat, b.lon]}
+              icon={createResponsiveIcon(
+                b.name === selectedBuildingName ? 'timetable-marker-selected' : 'timetable-marker-inner',
+                [32, 64],
+                [16, 64]
+              )}
+              eventHandlers={{
+                click: () => handleMarkerClick(b.lat, b.lon, b.name),
+              }}
+            />
+          ))}
       </MapContainer>
     </div>
   );
