@@ -166,7 +166,7 @@ export default function TimetablePage() {
   });
 
   return (
-    <main className="p-4 w-full max-w-md mx-auto">
+    <main className="p-4 w-full max-w-md mx-auto pb-[80px]">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-gray-900">시간표 입력</h2>
         <button
@@ -201,15 +201,15 @@ export default function TimetablePage() {
         </select>
       </div>
 
-      <div className="flex gap-2 mb-4 justify-center">
+      <div className="grid grid-cols-5 gap-2 mb-4">
         {weekdays.map(day => (
           <button
             key={day}
             onClick={() => toggleDay(day)}
-            className={`px-4 py-1 rounded-full border font-medium ${
+            className={`w-full py-2 rounded-md border font-medium text-sm ${
               selectedDays.includes(day)
-                ? 'bg-blue-500 text-white border-blue-500'
-                : 'bg-white text-black'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-gray-800'
             }`}
           >
             {day}
@@ -240,7 +240,7 @@ export default function TimetablePage() {
 
       <button
         onClick={handleAdd}
-        className="w-full bg-blue-600 text-white py-2 rounded-md mb-2 font-semibold"
+        className="w-full bg-blue-600 text-white py-2 rounded-md mb-4 font-semibold"
       >
         강의 추가
       </button>
@@ -252,19 +252,21 @@ export default function TimetablePage() {
         시간표 저장
       </button>
 
-      {Object.values(entries).some(dayList => dayList.length > 0) && (
-        <p className="text-red-600 text-sm font-medium mb-4 text-center">
-          ※시간표 변경 후 꼭 저장해주세요.※
-        </p>
-      )}
+      <p className={`text-red-600 text-sm font-medium mb-4 text-center transition-opacity duration-200 ${
+        Object.values(entries).some(dayList => dayList.length > 0) ? 'opacity-100' : 'opacity-0'
+      }`}>
+        ※시간표 변경 후 꼭 저장해주세요.※
+      </p>
 
       <div className="w-full overflow-hidden ml-[-4.165%]">
-        <table className="border-collapse w-full text-gray-800 text-[10px]">
+        <table className="border-collapse w-full text-gray-800 text-[10px] table-fixed">
           <thead>
             <tr>
-              <th className="w-1/12 bg-white p-0 m-0 border-none invisible"></th>
+              <th className="w-[8%] bg-white p-0 m-0 border-none invisible"></th>
               {weekdays.map(day => (
-                <th key={day} className="bg-gray-800 text-white w-2/12">{day}</th>
+                <th key={day} className="bg-gray-800 text-white w-[18.4%] text-center">
+                  {day}
+                </th>
               ))}
             </tr>
           </thead>
@@ -275,7 +277,7 @@ export default function TimetablePage() {
 
               return (
                 <tr key={slot}>
-                  <td className="relative align-top h-8">
+                  <td className="relative align-top h-[32px] w-[8%] pl-1">
                     {minute === '00' && (
                       <span className="absolute top-1 right-1 text-[10px] text-gray-600">{hour}</span>
                     )}
@@ -304,14 +306,13 @@ export default function TimetablePage() {
                         <td
                           key={day + slot}
                           rowSpan={span}
-                          className="border text-center align-top px-1 cursor-pointer"
+                          className="border text-center align-top px-2 py-[2px] cursor-pointer h-[32px] w-[18.4%]"
                           style={{ backgroundColor: entry.color }}
                           onClick={handleDelete}
                         >
-                          <div className="text-gray-900 font-medium text-[10px] leading-tight">
+                          <div className="text-gray-900 font-medium text-[10px] leading-snug break-words max-w-full whitespace-pre-line">
                             <strong>{entry.subject}</strong><br />
-                            {entry.building}<br />
-                            {entry.start}~{entry.end}
+                            {entry.building}
                           </div>
                         </td>
                       );
@@ -323,7 +324,7 @@ export default function TimetablePage() {
                     );
 
                     return isCovered ? null : (
-                      <td key={day + slot} className="border h-8"></td>
+                      <td key={day + slot} className="border h-[32px] w-[18.4%]"></td>
                     );
                   })}
                 </tr>
