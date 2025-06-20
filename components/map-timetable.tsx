@@ -174,7 +174,7 @@ export default function MapTimetable({ buttons = [] }: { buttons?: Button[] }) {
       {distance != null && estimatedTime != null && (
         <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-[1000] bg-white px-4 py-2 rounded shadow text-sm text-black">
           <div>총 거리: {Math.ceil(distance)} m</div>
-          <div>예상 시간: {Math.ceil(estimatedTime)}분</div>
+          <div>예상 시간: {Math.ceil(estimatedTime / 60)}분</div>
         </div>
       )}
 
