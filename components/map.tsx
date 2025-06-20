@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useRef, useEffect, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import type { Map as LeafletMap, LatLng, LatLngExpression, LeafletMouseEvent, GeoJSON} from 'leaflet';
+import type { Map as LeafletMap, LatLng, LatLngExpression, LeafletMouseEvent, GeoJSON } from 'leaflet';
 import CategoryDropdown from '../components/dropdown';
 
-type NodeMap = { [id: string]: { lat: number; lon: number };};
+type NodeMap = { [id: string]: { lat: number; lon: number } };
 type Edge = { from: string; to: string };
-type ButtonConfig = { label: string; path: string;};
-type BuildingInfo = { lat: number; lon: number;};
+type ButtonConfig = { label: string; path: string };
+type BuildingInfo = { lat: number; lon: number };
 
 const createResponsiveIcon = (
   className: string,
@@ -24,6 +24,7 @@ const createResponsiveIcon = (
     iconSize: size,
     iconAnchor: anchor,
   });
+
 const routeMarkerIcon = createResponsiveIcon('route-marker-inner', [50, 50], [25, 50]);
 const currentMarkerIcon = createResponsiveIcon('current-marker-inner', [25, 50], [12.5, 50]);
 
@@ -43,6 +44,8 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
   const [endBuilding, setEndBuilding] = useState('');
   const [startOptions, setStartOptions] = useState<string[]>([]);
   const [endOptions, setEndOptions] = useState<string[]>([]);
+  const [distance, setDistance] = useState<number | null>(null);
+  const [estimatedTime, setEstimatedTime] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -112,68 +115,62 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
   };
 
   const runSearch = async () => {
-  if (!startBuilding || !endBuilding) return;
-  const map = mapRef.current;
-  if (!map) return;
+    if (!startBuilding || !endBuilding) return;
+    const map = mapRef.current;
+    if (!map) return;
 
-  // 기존 경로 제거
-  if (routeLayerRef.current) {
-    map.removeLayer(routeLayerRef.current);
-    routeLayerRef.current = null;
-  }
+    if (routeLayerRef.current) {
+      map.removeLayer(routeLayerRef.current);
+      routeLayerRef.current = null;
+    }
+    markers.forEach((m) => m.remove());
+    setMarkers([]);
 
-  // 기존 마커 제거
-  markers.forEach(m => m.remove());
-  setMarkers([]);
-
-  const startInfo = await fetchBuildingCoords(startBuilding);
-  const endInfo = await fetchBuildingCoords(endBuilding);
-
-  if (!startInfo || !endInfo) {
-    alert('건물 정보를 불러올 수 없습니다.');
-    return;
-  }
-
-  const startLatLng: LatLngExpression = [startInfo.lat, startInfo.lon];
-  const endLatLng: LatLngExpression = [endInfo.lat, endInfo.lon];
-
-  const startMarker = L.marker(startLatLng, { icon: routeMarkerIcon });
-  const endMarker = L.marker(endLatLng, { icon: routeMarkerIcon });
-
-  startMarker.addTo(map);
-  endMarker.addTo(map);
-  setMarkers([startMarker, endMarker]);
-
-  map.setView(startLatLng, 17);
-
-  const startId = await getNearestNodeId(startInfo.lat, startInfo.lon);
-  const endId = await getNearestNodeId(endInfo.lat, endInfo.lon);
-  if (!startId || !endId) {
-    alert('노드를 찾을 수 없습니다.');
-    return;
-  }
-
-  try {
-    const res = await fetch('/api/route', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ start: startId, goal: endId }),
-    });
-
-    const geojson = await res.json();
-    if (!geojson || geojson.type !== 'FeatureCollection') {
-      alert('경로를 찾을 수 없습니다.');
+    const startInfo = await fetchBuildingCoords(startBuilding);
+    const endInfo = await fetchBuildingCoords(endBuilding);
+    if (!startInfo || !endInfo) {
+      alert('건물 정보를 불러올 수 없습니다.');
       return;
     }
 
-    const routeLayer = L.geoJSON(geojson).addTo(map);
-    routeLayerRef.current = routeLayer;
-    setShowSearch(false);
-  } catch {
-    alert('서버 오류');
-  }
-};
+    const startLatLng: LatLngExpression = [startInfo.lat, startInfo.lon];
+    const endLatLng: LatLngExpression = [endInfo.lat, endInfo.lon];
+    const startMarker = L.marker(startLatLng, { icon: routeMarkerIcon });
+    const endMarker = L.marker(endLatLng, { icon: routeMarkerIcon });
+    startMarker.addTo(map);
+    endMarker.addTo(map);
+    setMarkers([startMarker, endMarker]);
+    map.setView(startLatLng, 17);
 
+    const startId = await getNearestNodeId(startInfo.lat, startInfo.lon);
+    const endId = await getNearestNodeId(endInfo.lat, endInfo.lon);
+    if (!startId || !endId) {
+      alert('노드를 찾을 수 없습니다.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start: startId, goal: endId }),
+      });
+
+      const result = await res.json();
+      if (!result.geojson || result.geojson.type !== 'FeatureCollection') {
+        alert('경로를 찾을 수 없습니다.');
+        return;
+      }
+
+      const routeLayer = L.geoJSON(result.geojson).addTo(map);
+      routeLayerRef.current = routeLayer;
+      setDistance(result.distance || 0);
+      setEstimatedTime(result.estimated_time || 0);
+      setShowSearch(false);
+    } catch {
+      alert('서버 오류');
+    }
+  };
 
   useEffect(() => {
     const map = mapRef.current;
@@ -188,6 +185,8 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
           map.removeLayer(routeLayerRef.current);
           routeLayerRef.current = null;
         }
+        setDistance(null);
+        setEstimatedTime(null);
       }
 
       const marker = L.marker(e.latlng, { icon: routeMarkerIcon }).addTo(map);
@@ -197,10 +196,8 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
       if (points.length === 1) {
         const start = points[0];
         const goal = e.latlng;
-
         const startId = await getNearestNodeId(start.lat, start.lng);
         const goalId = await getNearestNodeId(goal.lat, goal.lng);
-
         if (!startId || !goalId) {
           alert('연결된 노드를 찾을 수 없습니다.');
           return;
@@ -213,14 +210,16 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
             body: JSON.stringify({ start: startId, goal: goalId }),
           });
 
-          const geojson = await res.json();
-          if (!geojson || geojson.type !== 'FeatureCollection') {
+          const result = await res.json();
+          if (!result.geojson || result.geojson.type !== 'FeatureCollection') {
             alert('경로를 찾을 수 없습니다.');
             return;
           }
 
-          const routeLayer = L.geoJSON(geojson).addTo(map);
+          const routeLayer = L.geoJSON(result.geojson).addTo(map);
           routeLayerRef.current = routeLayer;
+          setDistance(result.distance || 0);
+          setEstimatedTime(result.estimated_time || 0);
         } catch (err) {
           console.error('경로 요청 실패:', err);
         }
@@ -280,6 +279,16 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
     return null;
   }
 
+  const InfoPanel = () => {
+    if (distance == null || estimatedTime == null) return null;
+    return (
+      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-[1000] bg-white rounded-md px-4 py-2 shadow text-sm text-black">
+        <div>총 거리: {((Math.ceil(distance)))} m</div>
+        <div>예상 시간: {Math.ceil(estimatedTime / 60)}분</div>
+      </div>
+    );
+  };
+
   return (
     <div className="relative w-full h-screen">
       <MapContainer center={[35.1744, 126.9094]} zoom={16} className="w-full h-full z-0">
@@ -290,6 +299,8 @@ export default function MapClient({ buttons }: { buttons: ButtonConfig[] }) {
         />
         {currentPos && <Marker position={currentPos} icon={currentMarkerIcon} />}
       </MapContainer>
+
+      <InfoPanel />
 
       <div className="absolute top-4 right-4 flex flex-col gap-2 z-[1000]">
         {buttons.map(({ label, path }) => (
