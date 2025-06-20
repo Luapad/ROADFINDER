@@ -4,6 +4,7 @@ from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 import math
 import jwt
+import sys
 import datetime
 import json
 import pymysql
@@ -389,7 +390,7 @@ def route():
     if start not in nodes or goal not in nodes:
         return jsonify({"error": "Invalid node ID"}), 400
 
-    path = astar(start, goal, nodes, graph)
+    path, total_distance = astar(start, goal, nodes, graph)
     if not path:
         return jsonify({"error": "No path found"}), 404
 
@@ -416,8 +417,11 @@ def route():
         "type": "FeatureCollection",
         "features": features
     }
-
-    return jsonify(geojson)
+    estimated_time = total_distance / 1.3
+    return jsonify({
+        "geojson": geojson,
+        "distance": total_distance,
+        "estimated_time": estimated_time})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
