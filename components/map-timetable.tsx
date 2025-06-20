@@ -26,6 +26,8 @@ export default function MapTimetable({ buttons = [] }: { buttons?: Button[] }) {
   const [selectedBuildingName, setSelectedBuildingName] = useState<string | null>(null);
   const routeLayerRef = useRef<GeoJSON | null>(null);
   const [isButtonClick, setIsButtonClick] = useState(false);
+  const [distance, setDistance] = useState<number | null>(null);
+  const [estimatedTime, setEstimatedTime] = useState<number | null>(null);
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -74,6 +76,8 @@ export default function MapTimetable({ buttons = [] }: { buttons?: Button[] }) {
         map.removeLayer(routeLayerRef.current);
         routeLayerRef.current = null;
       }
+      setDistance(null);
+      setEstimatedTime(null);
     }
 
     const point = L.latLng(lat, lon);
@@ -97,17 +101,19 @@ export default function MapTimetable({ buttons = [] }: { buttons?: Button[] }) {
           body: JSON.stringify({ start: startId, goal: goalId }),
         });
 
-        const geojson = await res.json();
-        if (!geojson || geojson.type !== 'FeatureCollection') {
+        const result = await res.json();
+        if (!result.geojson || result.geojson.type !== 'FeatureCollection') {
           alert('경로를 찾을 수 없습니다.');
           return;
         }
 
-        const routeLayer = L.geoJSON(geojson).addTo(map);
+        const routeLayer = L.geoJSON(result.geojson).addTo(map);
         routeLayerRef.current = routeLayer;
 
+        setDistance(result.distance || 0);
+        setEstimatedTime(result.estimated_time || 0);
+
         map.setView(start, map.getZoom());
-        
       } catch (err) {
         console.error('경로 요청 실패:', err);
       }
@@ -162,6 +168,13 @@ export default function MapTimetable({ buttons = [] }: { buttons?: Button[] }) {
               {btn.label}
             </button>
           ))}
+        </div>
+      )}
+
+      {distance != null && estimatedTime != null && (
+        <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-[1000] bg-white px-4 py-2 rounded shadow text-sm text-black">
+          <div>총 거리: {Math.ceil(distance)} m</div>
+          <div>예상 시간: {Math.ceil(estimatedTime)}분</div>
         </div>
       )}
 
