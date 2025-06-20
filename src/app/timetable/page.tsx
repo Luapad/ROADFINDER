@@ -306,7 +306,7 @@ export default function TimetablePage() {
                         <td
                           key={day + slot}
                           rowSpan={span}
-                          className="border text-center align-top px-2 py-[2px] cursor-pointer h-[32px] w-[18.4%]"
+                          className="border align-top px-0.5 py-[2px] cursor-pointer h-[32px] w-[18.4%]"
                           style={{ backgroundColor: entry.color }}
                           onClick={handleDelete}
                         >
