@@ -17,8 +17,8 @@ def load_data():
     # 엣지 타입별 계수 및 고정 페널티 설정
     TYPE_ALPHA = {
         "road": 1.0,
-        "buildpass": 1.05,  # 거리 5%만큼 불리하게
-        "securepass": 100.0
+        "buildpass": 1.05,  # 거리 10%만큼 불리하게
+        "securepass": 5.0
     }
 
     TYPE_BETA = {
@@ -79,7 +79,11 @@ def astar(start, goal, nodes, graph):
                 current = came_from[current]
                 path.append(current)
             path.reverse()
-            return path
+
+            total_distance = 0
+            for i in range(len(path) - 1):
+                total_distance += heuristic(path[i], path[i+1], nodes)
+            return path, total_distance * 111000
 
         for neighbor, cost in graph[current]:
             tentative_g = g_score[current] + cost
@@ -89,7 +93,7 @@ def astar(start, goal, nodes, graph):
                 f_score[neighbor] = tentative_g + heuristic(neighbor, goal, nodes)
                 heapq.heappush(open_set, (f_score[neighbor], neighbor))
 
-    return None  # 경로를 못 찾은 경우
+    return None, None  # 경로를 못 찾은 경우
 
 # -----------------------------
 # 테스트 실행
